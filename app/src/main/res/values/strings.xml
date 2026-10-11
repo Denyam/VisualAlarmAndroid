@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Visual Alarm</string>
+    <string name="alarm_enabled">Alarm enabled</string>
+    <string name="alarm_disabled">Alarm disabled</string>
+    <string name="set_time">Set time</string>
+    <string name="repeat_days">Repeat</string>
+    <string name="snooze">Snooze</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="alarm_ringing">Alarm ringing</string>
+    <string name="notification_channel_alarms">Alarms</string>
+    <string name="notification_channel_alarms_desc">Alarm ringing notifications</string>
+    <string name="monday">Mon</string>
+    <string name="tuesday">Tue</string>
+    <string name="wednesday">Wed</string>
+    <string name="thursday">Thu</string>
+    <string name="friday">Fri</string>
+    <string name="saturday">Sat</string>
+    <string name="sunday">Sun</string>
+    <string name="snooze_duration">5 minutes</string>
+    <string name="permission_notification_rationale">We need notification permission to show the alarm when it rings.</string>
+    <string name="notification_permission_denied">Notification permission is required for alarms to work. Please enable it in settings.</string>
+</resources>
