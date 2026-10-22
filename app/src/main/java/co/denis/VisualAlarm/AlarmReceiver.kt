@@ -3,6 +3,7 @@ package co.denis.VisualAlarm
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.core.content.ContextCompat
 
 /**
  * Receives the alarm broadcast scheduled by [AlarmScheduler].
@@ -21,16 +22,16 @@ class AlarmReceiver : BroadcastReceiver() {
             Intent.ACTION_BOOT_COMPLETED -> return
 
             // The scheduled alarm firing.
-            ACTION_ALARM_FIRED -> showAlarm(context)
+            ACTION_ALARM_FIRED -> startAlarmService(context)
 
             // Legacy pending intents were created without an action; keep ringing for them.
-            null -> showAlarm(context)
+            null -> startAlarmService(context)
         }
     }
 
-    private fun showAlarm(context: Context) {
-        NotificationHelper.createNotificationChannel(context)
-        NotificationHelper.showAlarmNotification(context)
+    private fun startAlarmService(context: Context) {
+        val intent = AlarmRingingService.createStartIntent(context)
+        ContextCompat.startForegroundService(context, intent)
     }
 
     companion object {
