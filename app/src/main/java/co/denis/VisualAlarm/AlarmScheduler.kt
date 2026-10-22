@@ -22,13 +22,7 @@ class AlarmScheduler(private val context: Context) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        val intent = Intent(context, AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        val pendingIntent = buildPendingIntent()
 
         return try {
             alarmManager.setExactAndAllowWhileIdle(
@@ -44,13 +38,24 @@ class AlarmScheduler(private val context: Context) {
     }
 
     fun cancel() {
-        val intent = Intent(context, AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(
+        alarmManager.cancel(buildPendingIntent())
+    }
+
+    /**
+     * Builds the broadcast [PendingIntent] used to trigger [AlarmReceiver].
+     *
+     * The action is part of the PendingIntent's identity, so [schedule] and
+     * [cancel] must use the exact same intent for the alarm to be cancellable.
+     */
+    private fun buildPendingIntent(): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = AlarmReceiver.ACTION_ALARM_FIRED
+        }
+        return PendingIntent.getBroadcast(
             context,
             0,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        alarmManager.cancel(pendingIntent)
     }
 }

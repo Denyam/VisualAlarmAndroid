@@ -30,14 +30,16 @@
 
         <activity
             android:name=".AlarmActivity"
-            android:exported="true"
+            android:exported="false"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:launchMode="singleInstance" />
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:excludeFromRecents="true" />
 
         <receiver
             android:name=".AlarmReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

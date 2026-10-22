@@ -1,5 +1,6 @@
 package co.denis.VisualAlarm
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,8 +13,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import android.media.RingtoneManager
-import android.media.Ringtone
 
 class AlarmActivity : ComponentActivity() {
 
@@ -28,6 +27,15 @@ class AlarmActivity : ComponentActivity() {
                 })
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Keep the active Intent reference current.
+        setIntent(intent)
+        // The system may reuse an existing instance instead of creating a new one,
+        // so re-arm the ringtone to make sure the alarm is still audible.
+        NotificationHelper.startRingtone(this)
     }
 
     private fun stopRingtone() {

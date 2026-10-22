@@ -32,7 +32,7 @@ object NotificationHelper {
 
     fun getAlarmPendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, AlarmActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         return PendingIntent.getActivity(
             context,
@@ -62,7 +62,14 @@ object NotificationHelper {
         startRingtone(context)
     }
 
-    private fun startRingtone(context: Context) {
+    /**
+     * Starts (or restarts) the default alarm ringtone.
+     *
+     * Safe to call more than once: any previously created [Ringtone] is stopped
+     * and released first, so we never end up with two players running at once.
+     */
+    fun startRingtone(context: Context) {
+        stopRingtone()
         try {
             val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ringtone = RingtoneManager.getRingtone(context, notification)
