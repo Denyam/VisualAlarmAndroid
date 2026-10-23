@@ -6,8 +6,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.media.Ringtone
-import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
@@ -21,7 +19,7 @@ object NotificationHelper {
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
-                setSound(null, null) // We handle sound in AlarmActivity
+                setSound(null, null) // We handle sound in AlarmRingingService
                 enableVibration(true)
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
@@ -42,8 +40,6 @@ object NotificationHelper {
         )
     }
 
-    private var ringtone: Ringtone? = null
-
     fun showAlarmNotification(context: Context) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val pendingIntent = getAlarmPendingIntent(context)
@@ -59,28 +55,5 @@ object NotificationHelper {
             .setOngoing(true)
 
         notificationManager.notify(1, builder.build())
-        startRingtone(context)
-    }
-
-    /**
-     * Starts (or restarts) the default alarm ringtone.
-     *
-     * Safe to call more than once: any previously created [Ringtone] is stopped
-     * and released first, so we never end up with two players running at once.
-     */
-    fun startRingtone(context: Context) {
-        stopRingtone()
-        try {
-            val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ringtone = RingtoneManager.getRingtone(context, notification)
-            ringtone?.play()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    fun stopRingtone() {
-        ringtone?.stop()
-        ringtone = null
     }
 }

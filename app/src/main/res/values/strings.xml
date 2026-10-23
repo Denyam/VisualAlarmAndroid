@@ -7,6 +7,10 @@
     <string name="next">Next</string>
     <string name="previous">Previous</string>
 
+    <!-- Alarm permission flow -->
+    <string name="permission_still_needed">A required permission is still missing. Tap SET ALARM to try again.</string>
+    <string name="notification_permission_denied">Notifications are disabled, so alarms won\'t be shown. Tap SET ALARM to try again.</string>
+
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
