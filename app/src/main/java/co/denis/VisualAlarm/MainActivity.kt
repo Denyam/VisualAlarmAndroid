@@ -49,6 +49,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // CAMERA powers the torch strobe but is best-effort: we ask at most once
+    // per explicit user action, and a denial never blocks the alarm flow.
+    private var cameraPermissionRequested = false
+
+    private val cameraLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        continuePermissionFlow()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         permissions = AlarmPermissions(this)
@@ -80,6 +90,7 @@ class MainActivity : ComponentActivity() {
         pendingMinute = minute
         // An explicit tap re-arms every settings step for one more automatic attempt.
         autoLaunchedSettings.clear()
+        cameraPermissionRequested = false
         continuePermissionFlow()
     }
 
@@ -87,6 +98,7 @@ class MainActivity : ComponentActivity() {
      * Walks the three alarm permissions in order. Each missing permission either
      * opens its system prompt/settings screen or, if we just came back from one
      * without a grant, stops the chain with a toast (retried on next tap).
+     * The CAMERA prompt (torch strobe) is best-effort and never stops the chain.
      */
     private fun continuePermissionFlow() {
         if (!permissions.hasPostNotificationsPermission()) {
@@ -99,6 +111,12 @@ class MainActivity : ComponentActivity() {
         }
         if (!permissions.canUseFullScreenIntent()) {
             launchSettings(permissions.fullScreenIntentSettingsIntent())
+            return
+        }
+        if (!permissions.hasCameraPermission() && !cameraPermissionRequested) {
+            // Best-effort: the callback continues the flow whether granted or not.
+            cameraPermissionRequested = true
+            cameraLauncher.launch(Manifest.permission.CAMERA)
             return
         }
         schedulePendingAlarmIfAny()

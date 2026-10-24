@@ -19,7 +19,8 @@ import androidx.core.app.NotificationManagerCompat
  * the device is in Doze mode.
  *
  * The service posts an ongoing notification with a full-screen intent to
- * launch AlarmActivity, and plays the default alarm ringtone.
+ * launch AlarmActivity, plays the default alarm ringtone, and flashes the
+ * camera torch (best-effort) in sync with the screen strobe.
  */
 class AlarmRingingService : Service() {
 
@@ -30,6 +31,13 @@ class AlarmRingingService : Service() {
         private const val STOP_ACTION = "co.denis.VisualAlarm.action.STOP_ALARM"
         private const val SAFETY_TIMEOUT_MS = 5 * 60 * 1000L // 5 minutes
         private const val FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK = 2
+
+        /**
+         * Broadcast (app-internal) sent when the alarm is fully over, so the
+         * strobing AlarmActivity can finish instead of blinking forever after
+         * the ringtone/torch have already stopped.
+         */
+        const val ACTION_ALARM_STOPPED = "co.denis.VisualAlarm.action.ALARM_STOPPED"
 
         /** Creates an Intent to start the alarm ringing service. */
         fun createStartIntent(context: Context): Intent {
@@ -47,6 +55,7 @@ class AlarmRingingService : Service() {
     }
 
     private var ringtone: Ringtone? = null
+    private var torchFlasher: TorchFlasher? = null
     private var safetyTimeoutRunnable: Runnable? = null
 
     override fun onCreate() {
@@ -71,6 +80,9 @@ class AlarmRingingService : Service() {
         // Start ringtone
         startRingtone()
 
+        // Start torch flashing (best-effort; the alarm rings regardless)
+        startTorch()
+
         // Safety timeout: auto-stop after 5 minutes
         safetyTimeoutRunnable = Runnable { stopSelf() }
         val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -81,10 +93,21 @@ class AlarmRingingService : Service() {
 
     override fun onDestroy() {
         stopRingtone()
+        stopTorch()
         safetyTimeoutRunnable?.let {
             android.os.Handler(android.os.Looper.getMainLooper()).removeCallbacks(it)
         }
+        notifyAlarmStopped()
         super.onDestroy()
+    }
+
+    /** Tells the ringing screen (if any) that the alarm is over. */
+    private fun notifyAlarmStopped() {
+        try {
+            sendBroadcast(Intent(ACTION_ALARM_STOPPED).setPackage(packageName))
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -92,6 +115,7 @@ class AlarmRingingService : Service() {
     /** Stops the alarm and the service. */
     private fun stopAlarm() {
         stopRingtone()
+        stopTorch()
         NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(Service.STOP_FOREGROUND_REMOVE)
@@ -146,5 +170,25 @@ class AlarmRingingService : Service() {
     private fun stopRingtone() {
         ringtone?.stop()
         ringtone = null
+    }
+
+    private fun startTorch() {
+        stopTorch()
+        try {
+            torchFlasher = TorchFlasher(this).also { it.start() }
+        } catch (e: Exception) {
+            // Flashing is best-effort: never let it break the ringing alarm.
+            e.printStackTrace()
+            torchFlasher = null
+        }
+    }
+
+    private fun stopTorch() {
+        try {
+            torchFlasher?.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        torchFlasher = null
     }
 }

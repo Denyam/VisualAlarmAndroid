@@ -15,6 +15,9 @@ import androidx.core.content.ContextCompat
  * Checks and launches the system settings screens for the three permissions
  * needed for a reliable alarm: notifications, exact alarms, and full-screen intents.
  *
+ * Also checks the CAMERA permission, which is *best-effort*: it powers the
+ * torch strobe during the alarm but denying it never blocks the alarm itself.
+ *
  * Each check treats permissions that don't exist on the running platform version
  * as already granted, so the flow can simply walk the three in order.
  */
@@ -38,8 +41,16 @@ class AlarmPermissions(private val context: Context) {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
             context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
 
+    /** CAMERA is a runtime (dangerous) permission; needed for the alarm torch strobe. */
+    fun hasCameraPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
     fun hasAllPermissions(): Boolean =
-        hasPostNotificationsPermission() && canScheduleExactAlarms() && canUseFullScreenIntent()
+        hasPostNotificationsPermission() && canScheduleExactAlarms() &&
+            canUseFullScreenIntent() && hasCameraPermission()
 
     /** Resolves to Settings$AlarmsAndRemindersAppActivity on API 31+. */
     fun exactAlarmSettingsIntent(): Intent =
