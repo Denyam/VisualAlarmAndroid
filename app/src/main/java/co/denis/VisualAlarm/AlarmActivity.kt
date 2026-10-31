@@ -173,5 +173,5 @@ fun RingingScreen(onBrightFrame: (Boolean) -> Unit, onStop: () -> Unit) {
     }
 }
 
-/** Half-period of the strobe: white for 500 ms, black for 500 ms. */
-private const val BLINK_INTERVAL_MS = 500L
+/** Half-period of the strobe: white for 2000 ms, black for 2000 ms. */
+private const val BLINK_INTERVAL_MS = 2000L
