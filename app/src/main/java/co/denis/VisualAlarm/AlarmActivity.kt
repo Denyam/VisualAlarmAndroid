@@ -22,7 +22,7 @@ class AlarmActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 RingingScreen(onStop = {
-                    stopRingtone()
+                    stopAlarmService()
                     finish()
                 })
             }
@@ -35,11 +35,12 @@ class AlarmActivity : ComponentActivity() {
         setIntent(intent)
         // The system may reuse an existing instance instead of creating a new one,
         // so re-arm the ringtone to make sure the alarm is still audible.
-        NotificationHelper.startRingtone(this)
+        // The service handles the ringtone now, so no need to restart it here.
     }
 
-    private fun stopRingtone() {
-        NotificationHelper.stopRingtone()
+    private fun stopAlarmService() {
+        val intent = AlarmRingingService.createStopIntent(this)
+        stopService(intent)
     }
 }
 
