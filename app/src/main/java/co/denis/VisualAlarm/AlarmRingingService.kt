@@ -1,6 +1,8 @@
 package co.denis.VisualAlarm
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -8,7 +10,9 @@ import android.content.pm.ServiceInfo
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
@@ -57,6 +61,7 @@ class AlarmRingingService : Service() {
     private var ringtone: Ringtone? = null
     private var torchFlasher: TorchFlasher? = null
     private var safetyTimeoutRunnable: Runnable? = null
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -85,8 +90,9 @@ class AlarmRingingService : Service() {
 
         // Safety timeout: auto-stop after 5 minutes
         safetyTimeoutRunnable = Runnable { stopSelf() }
-        val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        handler.postDelayed(safetyTimeoutRunnable!!, SAFETY_TIMEOUT_MS)
+        safetyTimeoutRunnable?.let {
+            handler.postDelayed(it, SAFETY_TIMEOUT_MS)
+        }
 
         return START_NOT_STICKY
     }
@@ -95,7 +101,7 @@ class AlarmRingingService : Service() {
         stopRingtone()
         stopTorch()
         safetyTimeoutRunnable?.let {
-            android.os.Handler(android.os.Looper.getMainLooper()).removeCallbacks(it)
+            handler.removeCallbacks(it)
         }
         notifyAlarmStopped()
         super.onDestroy()
@@ -117,7 +123,7 @@ class AlarmRingingService : Service() {
         stopRingtone()
         stopTorch()
         NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             stopForeground(Service.STOP_FOREGROUND_REMOVE)
         } else {
             stopForeground(true)
@@ -142,16 +148,16 @@ class AlarmRingingService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = android.app.NotificationChannel(
+            val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Alarm Notifications",
-                android.app.NotificationManager.IMPORTANCE_HIGH
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Channel for Alarm notifications"
                 enableVibration(true)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }

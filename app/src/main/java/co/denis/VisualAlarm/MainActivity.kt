@@ -94,12 +94,6 @@ class MainActivity : ComponentActivity() {
         continuePermissionFlow()
     }
 
-    /**
-     * Walks the three alarm permissions in order. Each missing permission either
-     * opens its system prompt/settings screen or, if we just came back from one
-     * without a grant, stops the chain with a toast (retried on next tap).
-     * The CAMERA prompt (torch strobe) is best-effort and never stops the chain.
-     */
     private fun continuePermissionFlow() {
         if (!permissions.hasPostNotificationsPermission()) {
             postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)

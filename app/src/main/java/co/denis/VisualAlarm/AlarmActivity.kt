@@ -70,7 +70,9 @@ class AlarmActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 RingingScreen(
-                    onBrightFrame = { bright -> setScreenBrightness(if (bright) 1f else DIM_SCREEN_BRIGHTNESS) },
+                    onBrightFrame = { bright ->
+                        setScreenBrightness(if (bright) 1f else DIM_SCREEN_BRIGHTNESS)
+                    },
                     onStop = {
                         stopAlarmService()
                         finish()
