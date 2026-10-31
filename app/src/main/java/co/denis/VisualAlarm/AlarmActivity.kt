@@ -56,7 +56,7 @@ class AlarmActivity : ComponentActivity() {
 		} else {
 			window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
 		}
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
 			setTurnScreenOn(true)
 		} else {
 			window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
@@ -124,7 +124,7 @@ class AlarmActivity : ComponentActivity() {
 
 /**
  * Full-screen alarm UI that strobes between white and black while the alarm
- * rings: every [BLINK_INTERVAL_MS] the background hard-cuts to the opposite
+ * rings: every [STROBE_HALF_PERIOD_MS] the background hard-cuts to the opposite
  * color and [onBrightFrame] is invoked so the activity can pump the window
  * brightness in sync (max on white frames, near-off on black frames) for a
  * stronger strobe effect.
@@ -141,7 +141,7 @@ fun RingingScreen(onBrightFrame: (Boolean) -> Unit, onStop: () -> Unit) {
     LaunchedEffect(Unit) {
         while (true) {
             onBrightFrame(brightFrame)
-            delay(BLINK_INTERVAL_MS)
+            delay(STROBE_HALF_PERIOD_MS)
             brightFrame = !brightFrame
         }
     }
@@ -173,5 +173,9 @@ fun RingingScreen(onBrightFrame: (Boolean) -> Unit, onStop: () -> Unit) {
     }
 }
 
-/** Half-period of the strobe: white for 2000 ms, black for 2000 ms. */
-private const val BLINK_INTERVAL_MS = 2000L
+/**
+ * Half-period of both strobes, shared by the screen and the torch so they
+ * blink together: the screen shows white for 2000 ms, black for 2000 ms, and
+ * the torch fires at the same cadence (used by [TorchFlasher]).
+ */
+const val STROBE_HALF_PERIOD_MS = 2000L

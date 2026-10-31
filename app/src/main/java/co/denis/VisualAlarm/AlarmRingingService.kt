@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
@@ -30,7 +31,6 @@ class AlarmRingingService : Service() {
         private const val START_ACTION = "co.denis.VisualAlarm.action.START_ALARM"
         private const val STOP_ACTION = "co.denis.VisualAlarm.action.STOP_ALARM"
         private const val SAFETY_TIMEOUT_MS = 5 * 60 * 1000L // 5 minutes
-        private const val FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK = 2
 
         /**
          * Broadcast (app-internal) sent when the alarm is fully over, so the
@@ -72,7 +72,7 @@ class AlarmRingingService : Service() {
         // Start foreground with notification
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }

@@ -21,11 +21,6 @@ import android.os.Looper
  */
 class TorchFlasher(context: Context) {
 
-    companion object {
-        /** Same cadence as the screen strobe in [RingingScreen] so both blink together. */
-        const val FLASH_INTERVAL_MS = 500L
-    }
-
     private val cameraManager: CameraManager? =
         context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
     private val handler = Handler(Looper.getMainLooper())
@@ -38,7 +33,7 @@ class TorchFlasher(context: Context) {
         override fun run() {
             if (!running) return
             setTorch(!torchOn)
-            handler.postDelayed(this, FLASH_INTERVAL_MS)
+            handler.postDelayed(this, STROBE_HALF_PERIOD_MS)
         }
     }
 
