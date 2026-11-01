@@ -107,8 +107,7 @@ class AlarmActivity : ComponentActivity() {
     }
 
     private fun stopAlarmService() {
-        val intent = AlarmRingingService.createStopIntent(this)
-        stopService(intent)
+        stopService(Intent(this, AlarmRingingService::class.java))
     }
 
     companion object {
@@ -176,8 +175,8 @@ fun RingingScreen(onBrightFrame: (Boolean) -> Unit, onStop: () -> Unit) {
 }
 
 /**
- * Half-period of both strobes, shared by the screen and the torch so they
- * blink together: the screen shows white for 2000 ms, black for 2000 ms, and
+ * Half-period of both strobes, shared by the screen and the torch:
+ * the screen shows white for 2000 ms, black for 2000 ms, and
  * the torch fires at the same cadence (used by [TorchFlasher]).
  */
 const val STROBE_HALF_PERIOD_MS = 2000L

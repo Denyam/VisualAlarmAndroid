@@ -33,7 +33,6 @@ class AlarmRingingService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "alarm_channel"
         private const val START_ACTION = "co.denis.VisualAlarm.action.START_ALARM"
-        private const val STOP_ACTION = "co.denis.VisualAlarm.action.STOP_ALARM"
         private const val SAFETY_TIMEOUT_MS = 5 * 60 * 1000L // 5 minutes
 
         /**
@@ -49,13 +48,6 @@ class AlarmRingingService : Service() {
                 action = START_ACTION
             }
         }
-
-        /** Creates an Intent to stop the alarm ringing service. */
-        fun createStopIntent(context: Context): Intent {
-            return Intent(context, AlarmRingingService::class.java).apply {
-                action = STOP_ACTION
-            }
-        }
     }
 
     private var ringtone: Ringtone? = null
@@ -69,11 +61,6 @@ class AlarmRingingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == STOP_ACTION || intent == null) {
-            stopAlarm()
-            return START_NOT_STICKY
-        }
-
         // Start foreground with notification
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -103,6 +90,15 @@ class AlarmRingingService : Service() {
         safetyTimeoutRunnable?.let {
             handler.removeCallbacks(it)
         }
+        // Explicit notification teardown: this is the single shutdown path for
+        // every way the service can end (STOP tap, safety timeout, system call
+        // to stopService, ...).
+        NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            stopForeground(Service.STOP_FOREGROUND_REMOVE)
+        } else {
+            stopForeground(true)
+        }
         notifyAlarmStopped()
         super.onDestroy()
     }
@@ -117,19 +113,6 @@ class AlarmRingingService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-
-    /** Stops the alarm and the service. */
-    private fun stopAlarm() {
-        stopRingtone()
-        stopTorch()
-        NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            stopForeground(Service.STOP_FOREGROUND_REMOVE)
-        } else {
-            stopForeground(true)
-        }
-        stopSelf()
-    }
 
     private fun buildNotification(): Notification {
         val pendingIntent = NotificationHelper.getAlarmPendingIntent(this)
