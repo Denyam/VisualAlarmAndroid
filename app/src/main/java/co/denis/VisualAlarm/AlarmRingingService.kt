@@ -75,6 +75,10 @@ class AlarmRingingService : Service() {
         // Start torch flashing (best-effort; the alarm rings regardless)
         startTorch()
 
+        safetyTimeoutRunnable?.let {
+            handler.removeCallbacks(it)
+        }
+
         // Safety timeout: auto-stop after 5 minutes
         safetyTimeoutRunnable = Runnable { stopSelf() }
         safetyTimeoutRunnable?.let {
