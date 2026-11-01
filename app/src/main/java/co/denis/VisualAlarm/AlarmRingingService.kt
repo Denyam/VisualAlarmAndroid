@@ -128,6 +128,7 @@ class AlarmRingingService : Service() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setFullScreenIntent(pendingIntent, true)
+            .setContentIntent(pendingIntent)
             .setAutoCancel(false) // Don't auto-cancel; we manage it
             .setOngoing(true)
             .build()
