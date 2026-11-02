@@ -15,17 +15,43 @@ import androidx.core.content.ContextCompat
  */
 class AlarmReceiver : BroadcastReceiver() {
 
-    override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
+    override fun onReceive(context: Context, broadcastIntent: Intent) {
+        when (broadcastIntent.action) {
             // Protected broadcast: only the system can send it. Nothing to ring for.
-            // TODO: reschedule pending alarms here once alarm persistence is added.
-            Intent.ACTION_BOOT_COMPLETED -> return
+            Intent.ACTION_BOOT_COMPLETED -> rearmAlarmsAfterBoot(context)
 
             // The scheduled alarm firing.
-            ACTION_ALARM_FIRED -> startAlarmService(context)
+            ACTION_ALARM_FIRED -> startAlarmServiceAndClear(context, broadcastIntent)
 
             // Legacy pending intents were created without an action; keep ringing for them.
             null -> startAlarmService(context)
+        }
+    }
+
+    /**
+     * Re-arms every enabled, saved alarm after a reboot. Alarms must be stored in
+     * [AlarmStore] to survive process death anyway, so this keeps them working
+     * past `BOOT_COMPLETED`.
+     */
+    private fun rearmAlarmsAfterBoot(context: Context) {
+        val store = AlarmStore(context)
+        val alarms = store.loadAll().filter { it.enabled }
+        alarms.forEach { alarm ->
+            val success = AlarmScheduler(context).schedule(alarm.id, alarm.hour, alarm.minute)
+            if (!success) return@forEach
+        }
+    }
+
+    /**
+     * The scheduled alarm has fired. Start the ring service then delete the
+     * stored alarm entry so the UI reports "alarm set" only while the user is
+     * still configuring the next one. Today alarms are one-shot.
+     */
+    private fun startAlarmServiceAndClear(context: Context, broadcastIntent: Intent) {
+        startAlarmService(context)
+        val alarmId = broadcastIntent.getStringExtra(EXTRA_ALARM_ID)
+        if (alarmId != null) {
+            AlarmStore(context).delete(alarmId)
         }
     }
 
@@ -37,5 +63,6 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         /** Action broadcast by [AlarmScheduler] when the alarm fires. */
         const val ACTION_ALARM_FIRED = "co.denis.VisualAlarm.action.ALARM_FIRED"
+        private const val EXTRA_ALARM_ID = "alarm_id"
     }
 }

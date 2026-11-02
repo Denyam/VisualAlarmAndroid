@@ -9,7 +9,13 @@ import java.util.*
 class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    fun schedule(hour: Int, minute: Int): Boolean {
+    /**
+     * Schedule an alarm with a unique identifier.
+     *
+     * The action is part of the PendingIntent's identity, so schedule and
+     * cancel must use the exact same identifier for the alarm to be cancellable.
+     */
+    fun schedule(alarmId: String, hour: Int, minute: Int): Boolean {
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -22,7 +28,7 @@ class AlarmScheduler(private val context: Context) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        val pendingIntent = buildPendingIntent()
+        val pendingIntent = buildPendingIntent(alarmId)
 
         return try {
             alarmManager.setExactAndAllowWhileIdle(
@@ -37,25 +43,29 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
-    fun cancel() {
-        alarmManager.cancel(buildPendingIntent())
+    /**
+     * Cancel an alarm with the given identifier.
+     */
+    fun cancel(alarmId: String) {
+        alarmManager.cancel(buildPendingIntent(alarmId))
     }
 
-    /**
-     * Builds the broadcast [PendingIntent] used to trigger [AlarmReceiver].
-     *
-     * The action is part of the PendingIntent's identity, so [schedule] and
-     * [cancel] must use the exact same intent for the alarm to be cancellable.
-     */
-    private fun buildPendingIntent(): PendingIntent {
+    private fun buildPendingIntent(alarmId: String): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_ALARM_FIRED
+            putExtra(EXTRA_ALARM_ID, alarmId)
         }
+        // Use alarmId in the requestCode to differentiate alarms
+        val requestCode = alarmId.hashCode()
         return PendingIntent.getBroadcast(
             context,
-            0,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+    }
+
+    companion object {
+        private const val EXTRA_ALARM_ID = "alarm_id"
     }
 }

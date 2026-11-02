@@ -9,6 +9,8 @@
 
     <!-- Alarm permission flow -->
     <string name="permission_still_needed">A required permission is still missing. Tap SET ALARM to try again.</string>
+
+    <string name="cancel_alarm">Cancel Alarm</string>
     <string name="notification_permission_denied">Notifications are disabled, so alarms won\'t be shown. Tap SET ALARM to try again.</string>
 
     <string name="lorem_ipsum">

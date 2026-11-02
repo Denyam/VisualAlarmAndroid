@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- Used by CameraManager.setTorchMode for the alarm torch strobe. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Required so the app receives BOOT_COMPLETED after a reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Requesting CAMERA implies the camera feature; keep both optional so
          camera-less / flash-less devices can still install the alarm app.

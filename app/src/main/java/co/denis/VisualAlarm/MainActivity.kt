@@ -11,7 +11,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,11 +21,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import java.util.*
+import androidx.compose.ui.unit.dp
+import java.util.Calendar
+import java.util.Locale
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var permissions: AlarmPermissions
+    private lateinit var alarmStore: AlarmStore
 
     // Time of the alarm the user asked for; non-null while the permission
     // chain is still running for a "SET ALARM" tap.
@@ -62,12 +68,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         permissions = AlarmPermissions(this)
+        alarmStore = AlarmStore(this)
         setContent {
             MaterialTheme {
                 AlarmSetScreen(
+                    context = LocalContext.current,
                     onSetAlarm = { hour, minute ->
                         onSetAlarmClicked(hour, minute)
-                    }
+                    },
+                    onCancelAlarm = { onCancelAlarm() }
                 )
             }
         }
@@ -142,31 +151,70 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
+    /**
+     * Schedules [pendingHour]/[pendingMinute] via [AlarmScheduler] and persists
+     * the result so it survives reboots and process death.
+     */
     private fun schedulePendingAlarmIfAny() {
         val hour = pendingHour ?: return
         val minute = pendingMinute ?: return
         clearPendingAlarm()
 
-        val success = AlarmScheduler(this).schedule(hour, minute)
-        val text = if (success)
-            "Alarm set for $hour:$minute"
-        else
-            "Failed to set alarm. Check permissions."
-
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+        val alarm = StoredAlarm(
+            id = UUID.randomUUID().toString(),
+            hour = hour,
+            minute = minute,
+            enabled = true
+        )
+        val success = AlarmScheduler(this).schedule(alarm.id, hour, minute)
+        if (success) {
+            alarmStore.save(alarm)
+        } else {
+            Toast.makeText(
+                this,
+                "Failed to set alarm. Check permissions.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun clearPendingAlarm() {
         pendingHour = null
         pendingMinute = null
     }
+
+    private fun onCancelAlarm() {
+        // Cancel each saved alarm by its id, then wipe the stored copy.
+        alarmStore.loadAll().forEach { alarm ->
+            AlarmScheduler(this).cancel(alarm.id)
+        }
+        alarmStore.clear()
+        autoLaunchedSettings.clear()
+        cameraPermissionRequested = false
+        pendingHour = null
+        pendingMinute = null
+    }
 }
 
 @Composable
-fun AlarmSetScreen(onSetAlarm: (Int, Int) -> Unit) {
-    val context = LocalContext.current
+fun AlarmSetScreen(
+    context: android.content.Context,
+    onSetAlarm: (Int, Int) -> Unit,
+    onCancelAlarm: () -> Unit
+) {
     var selectedHour by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
     var selectedMinute by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
+
+    // Read persisted alarms each composition so UI stays in sync.
+    val persisted = AlarmStore(context).loadAll()
+
+    // If we have a saved alarm, pre-fill the UI with its time.
+    val hasAlarm = persisted.isNotEmpty()
+    if (hasAlarm) {
+        val alarm = persisted.first()
+        selectedHour = alarm.hour
+        selectedMinute = alarm.minute
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -174,13 +222,15 @@ fun AlarmSetScreen(onSetAlarm: (Int, Int) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Set Alarm",
+            text = if (persisted.isEmpty()) "Set Alarm" else "Alarm set",
             style = MaterialTheme.typography.headlineMedium
         )
+
         Text(
             text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
             style = MaterialTheme.typography.displayLarge
         )
+
         Button(onClick = {
             TimePickerDialog(
                 context,
@@ -195,8 +245,18 @@ fun AlarmSetScreen(onSetAlarm: (Int, Int) -> Unit) {
         }) {
             Text(text = "Change Time")
         }
-        Button(onClick = { onSetAlarm(selectedHour, selectedMinute) }) {
+
+        Button(
+            onClick = { onSetAlarm(selectedHour, selectedMinute) },
+            enabled = !hasAlarm
+        ) {
             Text(text = "SET ALARM")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onCancelAlarm, enabled = hasAlarm) {
+            Text(text = context.getString(R.string.cancel_alarm))
         }
     }
 }
