@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +73,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 AlarmSetScreen(
-                    context = LocalContext.current,
+                    alarmStore = alarmStore,
                     onSetAlarm = { hour, minute ->
                         onSetAlarmClicked(hour, minute)
                     },
@@ -198,15 +199,18 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AlarmSetScreen(
-    context: android.content.Context,
+    alarmStore: AlarmStore,
     onSetAlarm: (Int, Int) -> Unit,
     onCancelAlarm: () -> Unit
 ) {
     var selectedHour by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
     var selectedMinute by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
 
-    // Read persisted alarms each composition so UI stays in sync.
-    val persisted = AlarmStore(context).loadAll()
+    // Observe alarms from StateFlow - triggers recomposition on change.
+    val persisted by alarmStore.alarms.collectAsState()
+
+    // Get context for system dialogs and string resources
+    val context = LocalContext.current
 
     // If we have a saved alarm, pre-fill the UI with its time.
     val hasAlarm = persisted.isNotEmpty()
