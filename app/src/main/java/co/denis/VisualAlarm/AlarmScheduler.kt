@@ -12,6 +12,9 @@ class AlarmScheduler(private val context: Context) {
     /**
      * Schedule an alarm with a unique identifier.
      *
+     * Uses setAlarmClock() which shows a status bar icon and gets higher priority
+     * (bypasses Doze and App Standby Bucket restrictions).
+     *
      * The action is part of the PendingIntent's identity, so schedule and
      * cancel must use the exact same identifier for the alarm to be cancellable.
      */
@@ -29,13 +32,14 @@ class AlarmScheduler(private val context: Context) {
         }
 
         val pendingIntent = buildPendingIntent(alarmId)
+        val triggerTime = calendar.timeInMillis
 
         return try {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(
+                triggerTime,
+                buildShowIntent(alarmId)  // Intent to launch when user taps alarm icon
             )
+            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
             true
         } catch (e: SecurityException) {
             // Handle case where SCHEDULE_EXACT_ALARM permission is not granted
@@ -60,6 +64,24 @@ class AlarmScheduler(private val context: Context) {
         return PendingIntent.getBroadcast(
             context,
             requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
+     * Intent shown when user taps the alarm clock icon in status bar.
+     * Launches the main activity so user can dismiss/cancel the alarm.
+     */
+    private fun buildShowIntent(alarmId: String): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            putExtra(EXTRA_ALARM_ID, alarmId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        return PendingIntent.getActivity(
+            context,
+            alarmId.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
