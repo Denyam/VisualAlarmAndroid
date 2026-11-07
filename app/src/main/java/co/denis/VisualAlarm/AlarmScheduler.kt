@@ -5,9 +5,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import java.util.*
+import java.util.concurrent.atomic.AtomicInteger
 
 class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
+    private val requestCodeGenerator = AtomicInteger(0)
 
     /**
      * Schedule an alarm with a unique identifier.
@@ -59,8 +61,8 @@ class AlarmScheduler(private val context: Context) {
             action = AlarmReceiver.ACTION_ALARM_FIRED
             putExtra(EXTRA_ALARM_ID, alarmId)
         }
-        // Use alarmId in the requestCode to differentiate alarms
-        val requestCode = alarmId.hashCode()
+        // Use AtomicInteger to avoid hash collisions
+        val requestCode = requestCodeGenerator.getAndIncrement()
         return PendingIntent.getBroadcast(
             context,
             requestCode,
@@ -81,7 +83,7 @@ class AlarmScheduler(private val context: Context) {
         }
         return PendingIntent.getActivity(
             context,
-            alarmId.hashCode(),
+            requestCodeGenerator.getAndIncrement(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

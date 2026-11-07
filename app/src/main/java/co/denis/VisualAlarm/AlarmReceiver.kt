@@ -36,9 +36,9 @@ class AlarmReceiver : BroadcastReceiver() {
     private fun rearmAlarmsAfterBoot(context: Context) {
         val store = (context.applicationContext as AlarmApplication).alarmStore
         val alarms = store.loadAll().filter { it.enabled }
-        alarms.forEach { alarm ->
+        for (alarm in alarms) {
             val success = AlarmScheduler(context).schedule(alarm.id, alarm.hour, alarm.minute)
-            if (!success) return@forEach
+            if (!success) continue
         }
     }
 

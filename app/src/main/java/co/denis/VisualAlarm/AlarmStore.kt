@@ -1,10 +1,17 @@
 package co.denis.VisualAlarm
 
 import android.content.Context
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Persisted alarm metadata stored on disk so alarms survive process death and
@@ -24,29 +31,45 @@ class AlarmStore(private val context: Context) {
 
     private val _alarms = MutableStateFlow(emptyList<StoredAlarm>())
     val alarms: StateFlow<List<StoredAlarm>> = _alarms
+    private val lock = ReentrantLock()
+    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         _alarms.value = loadAllSync()
     }
 
     fun save(alarm: StoredAlarm) {
-        val all = _alarms.value.toMutableList()
-        // Remove any existing alarm with the same id
-        all.removeIf { it.id == alarm.id }
-        all.add(alarm)
-        persist(all)
-        _alarms.value = all
+        lock.lock()
+        try {
+            val all = _alarms.value.toMutableList()
+            all.removeIf { it.id == alarm.id }
+            all.add(alarm)
+            _alarms.value = all
+            persist(all)
+        } finally {
+            lock.unlock()
+        }
     }
 
     fun delete(id: String) {
-        val filtered = _alarms.value.filterNot { it.id == id }
-        persist(filtered)
-        _alarms.value = filtered
+        lock.lock()
+        try {
+            val filtered = _alarms.value.filterNot { it.id == id }
+            _alarms.value = filtered
+            persist(filtered)
+        } finally {
+            lock.unlock()
+        }
     }
 
     fun clear() {
-        prefs.edit().remove(KEY_ALARMS_JSON).apply()
-        _alarms.value = emptyList()
+        lock.lock()
+        try {
+            _alarms.value = emptyList()
+            persist(emptyList())
+        } finally {
+            lock.unlock()
+        }
     }
 
     /** Synchronous load for initialisation or non-reactive callers. */
@@ -65,23 +88,31 @@ class AlarmStore(private val context: Context) {
                     enabled = obj.optBoolean("enabled", true)
                 )
             }
-        } catch (e: Exception) {
+        } catch (e: JSONException) {
+            // Log the error for debugging but don't crash - return empty list
+            // to avoid persisting corrupted data
+            e.printStackTrace()
             emptyList()
         }
     }
 
     private fun persist(alarms: List<StoredAlarm>) {
-        val array = JSONArray()
-        alarms.forEach { alarm ->
-            val obj = JSONObject().apply {
-                put("id", alarm.id)
-                put("hour", alarm.hour)
-                put("minute", alarm.minute)
-                put("enabled", alarm.enabled)
+        persistScope.launch {
+            val array = JSONArray()
+            alarms.forEach { alarm ->
+                val obj = JSONObject().apply {
+                    put("id", alarm.id)
+                    put("hour", alarm.hour)
+                    put("minute", alarm.minute)
+                    put("enabled", alarm.enabled)
+                }
+                array.put(obj)
             }
-            array.put(obj)
+            val success = prefs.edit().putString(KEY_ALARMS_JSON, array.toString()).commit()
+            if (!success) {
+                Log.e("AlarmStore", "Failed to persist alarms")
+            }
         }
-        prefs.edit().putString(KEY_ALARMS_JSON, array.toString()).apply()
     }
 }
 

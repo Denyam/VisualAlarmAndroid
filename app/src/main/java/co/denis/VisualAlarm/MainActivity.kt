@@ -213,10 +213,14 @@ fun AlarmSetScreen(
 
     // If we have a saved alarm, pre-fill the UI with its time.
     val hasAlarm = persisted.isNotEmpty()
-    if (hasAlarm) {
-        val alarm = persisted.first()
-        selectedHour = alarm.hour
-        selectedMinute = alarm.minute
+    
+    // Sync UI state with persisted alarm when it changes
+    LaunchedEffect(key1 = hasAlarm) {
+        if (hasAlarm) {
+            val alarm = persisted.first()
+            selectedHour = alarm.hour
+            selectedMinute = alarm.minute
+        }
     }
 
     Column(
