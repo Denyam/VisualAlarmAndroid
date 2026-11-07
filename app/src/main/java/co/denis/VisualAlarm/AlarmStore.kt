@@ -32,7 +32,7 @@ class AlarmStore(private val context: Context) {
     private val _alarms = MutableStateFlow(emptyList<StoredAlarm>())
     val alarms: StateFlow<List<StoredAlarm>> = _alarms
     private val lock = ReentrantLock()
-    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
     init {
         _alarms.value = loadAllSync()
