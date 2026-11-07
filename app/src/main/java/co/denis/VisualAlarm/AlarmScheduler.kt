@@ -5,11 +5,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
-    private val requestCodeGenerator = AtomicInteger(0)
 
     /**
      * Schedule an alarm with a unique identifier.
@@ -34,12 +32,13 @@ class AlarmScheduler(private val context: Context) {
         }
 
         val pendingIntent = buildPendingIntent(alarmId)
+        val showIntent = buildShowIntent(alarmId)
         val triggerTime = calendar.timeInMillis
 
         return try {
             val alarmClockInfo = AlarmManager.AlarmClockInfo(
                 triggerTime,
-                buildShowIntent(alarmId)  // Intent to launch when user taps alarm icon
+                showIntent
             )
             alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
             true
@@ -51,9 +50,12 @@ class AlarmScheduler(private val context: Context) {
 
     /**
      * Cancel an alarm with the given identifier.
+     * Cancels both the broadcast PendingIntent and the show intent
+     * to remove the status bar icon.
      */
     fun cancel(alarmId: String) {
         alarmManager.cancel(buildPendingIntent(alarmId))
+        alarmManager.cancel(buildShowIntent(alarmId))
     }
 
     private fun buildPendingIntent(alarmId: String): PendingIntent {
@@ -61,8 +63,7 @@ class AlarmScheduler(private val context: Context) {
             action = AlarmReceiver.ACTION_ALARM_FIRED
             putExtra(EXTRA_ALARM_ID, alarmId)
         }
-        // Use AtomicInteger to avoid hash collisions
-        val requestCode = requestCodeGenerator.getAndIncrement()
+        val requestCode = requestCodeFromAlarmId(alarmId)
         return PendingIntent.getBroadcast(
             context,
             requestCode,
@@ -81,12 +82,23 @@ class AlarmScheduler(private val context: Context) {
             putExtra(EXTRA_ALARM_ID, alarmId)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
+        // Use the SAME request code as buildPendingIntent so cancel() works for both
+        val requestCode = requestCodeFromAlarmId(alarmId)
         return PendingIntent.getActivity(
             context,
-            requestCodeGenerator.getAndIncrement(),
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+    }
+
+    /**
+     * Derive a stable request code from alarmId.
+     * Uses hashCode to produce a deterministic int that survives process death.
+     * The low 16 bits are used since PendingIntent requestCode is 16-bit on some APIs.
+     */
+    private fun requestCodeFromAlarmId(alarmId: String): Int {
+        return alarmId.hashCode().and(0xFFFF)
     }
 
     companion object {

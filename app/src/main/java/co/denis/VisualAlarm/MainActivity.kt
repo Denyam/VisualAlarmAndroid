@@ -202,9 +202,6 @@ fun AlarmSetScreen(
     onSetAlarm: (Int, Int) -> Unit,
     onCancelAlarm: () -> Unit
 ) {
-    var selectedHour by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) }
-    var selectedMinute by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MINUTE)) }
-
     // Observe alarms from StateFlow - triggers recomposition on change.
     val persisted by alarmStore.alarms.collectAsState()
 
@@ -213,14 +210,13 @@ fun AlarmSetScreen(
 
     // If we have a saved alarm, pre-fill the UI with its time.
     val hasAlarm = persisted.isNotEmpty()
-    
-    // Sync UI state with persisted alarm when it changes
-    LaunchedEffect(key1 = hasAlarm) {
-        if (hasAlarm) {
-            val alarm = persisted.first()
-            selectedHour = alarm.hour
-            selectedMinute = alarm.minute
-        }
+
+    // Initialize selection from persisted alarm; re-run when persisted changes
+    var selectedHour by remember(persisted) {
+        mutableIntStateOf(persisted.firstOrNull()?.hour ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
+    }
+    var selectedMinute by remember(persisted) {
+        mutableIntStateOf(persisted.firstOrNull()?.minute ?: Calendar.getInstance().get(Calendar.MINUTE))
     }
 
     Column(

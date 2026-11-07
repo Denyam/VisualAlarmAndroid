@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,11 @@ data class StoredAlarm(
     val enabled: Boolean = true
 )
 
+sealed interface LoadAlarmsResult {
+    data class Success(val alarms: List<StoredAlarm>) : LoadAlarmsResult
+    data class Failure(val error: String, val cause: Exception?, val rawJson: String?) : LoadAlarmsResult
+}
+
 class AlarmStore(private val context: Context) {
 
     private val prefs =
@@ -35,7 +41,10 @@ class AlarmStore(private val context: Context) {
     private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
 
     init {
-        _alarms.value = loadAllSync()
+        _alarms.value = when (val result = loadAllSync()) {
+            is LoadAlarmsResult.Success -> result.alarms
+            is LoadAlarmsResult.Failure -> emptyList()
+        }
     }
 
     fun save(alarm: StoredAlarm) {
@@ -75,11 +84,12 @@ class AlarmStore(private val context: Context) {
     /** Synchronous load for initialisation or non-reactive callers. */
     fun loadAll(): List<StoredAlarm> = _alarms.value
 
-    private fun loadAllSync(): List<StoredAlarm> {
-        val jsonString = prefs.getString(KEY_ALARMS_JSON, null) ?: return emptyList()
+    /** Load alarms from disk, returning a Result to surface parse errors. */
+    fun loadAllSync(): LoadAlarmsResult {
+        val jsonString = prefs.getString(KEY_ALARMS_JSON, null) ?: return LoadAlarmsResult.Success(emptyList())
         return try {
             val array = JSONArray(jsonString)
-            (0 until array.length()).map { idx ->
+            val alarms = (0 until array.length()).map { idx ->
                 val obj = array.getJSONObject(idx)
                 StoredAlarm(
                     id = obj.getString("id"),
@@ -88,11 +98,10 @@ class AlarmStore(private val context: Context) {
                     enabled = obj.optBoolean("enabled", true)
                 )
             }
+            LoadAlarmsResult.Success(alarms)
         } catch (e: JSONException) {
-            // Log the error for debugging but don't crash - return empty list
-            // to avoid persisting corrupted data
-            e.printStackTrace()
-            emptyList()
+            Log.e("AlarmStore", "Failed to parse alarms JSON: $jsonString", e)
+            LoadAlarmsResult.Failure("JSON parse error", e, jsonString)
         }
     }
 
