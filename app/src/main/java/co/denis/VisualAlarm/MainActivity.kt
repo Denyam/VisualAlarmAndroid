@@ -30,7 +30,7 @@ import java.util.UUID
 class MainActivity : ComponentActivity() {
 
     private lateinit var permissions: AlarmPermissions
-    private lateinit var alarmStore: AlarmStore
+    private val alarmStore: AlarmStore by lazy { (applicationContext as AlarmApplication).alarmStore }
 
     // Time of the alarm the user asked for; non-null while the permission
     // chain is still running for a "SET ALARM" tap.
@@ -69,7 +69,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         permissions = AlarmPermissions(this)
-        alarmStore = AlarmStore(this)
         setContent {
             MaterialTheme {
                 AlarmSetScreen(

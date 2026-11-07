@@ -34,7 +34,7 @@ class AlarmReceiver : BroadcastReceiver() {
      * past `BOOT_COMPLETED`.
      */
     private fun rearmAlarmsAfterBoot(context: Context) {
-        val store = AlarmStore(context)
+        val store = (context.applicationContext as AlarmApplication).alarmStore
         val alarms = store.loadAll().filter { it.enabled }
         alarms.forEach { alarm ->
             val success = AlarmScheduler(context).schedule(alarm.id, alarm.hour, alarm.minute)
@@ -51,7 +51,7 @@ class AlarmReceiver : BroadcastReceiver() {
         startAlarmService(context)
         val alarmId = broadcastIntent.getStringExtra(EXTRA_ALARM_ID)
         if (alarmId != null) {
-            AlarmStore(context).delete(alarmId)
+            (context.applicationContext as AlarmApplication).alarmStore.delete(alarmId)
         }
     }
 
