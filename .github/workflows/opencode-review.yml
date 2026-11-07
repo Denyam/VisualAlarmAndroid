@@ -18,10 +18,12 @@ jobs:
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }} 
         with:
-          model: opencode/mimo-v2.6-flash-free
+          model: nvidia/nvidia/nemotron-3-ultra-550b-a55b
           prompt: |
             Review this pull request:
             - Check for code quality issues
             - Look for potential bugs
             - Suggest improvements
+
