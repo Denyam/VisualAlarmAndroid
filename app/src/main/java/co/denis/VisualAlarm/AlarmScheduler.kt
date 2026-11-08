@@ -98,7 +98,7 @@ class AlarmScheduler(private val context: Context) {
      * The low 16 bits are used since PendingIntent requestCode is 16-bit on some APIs.
      */
     private fun requestCodeFromAlarmId(alarmId: String): Int {
-        return alarmId.hashCode().and(0xFFFF)
+        return alarmId.hashCode().xor(System.identityHashCode(context)).and(0xFFFF)
     }
 
     companion object {

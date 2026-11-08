@@ -197,7 +197,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AlarmSetScreen(
+private fun AlarmSetScreen(
     alarmStore: AlarmStore,
     onSetAlarm: (Int, Int) -> Unit,
     onCancelAlarm: () -> Unit
