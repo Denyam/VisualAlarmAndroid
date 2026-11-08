@@ -211,12 +211,19 @@ private fun AlarmSetScreen(
     // If we have a saved alarm, pre-fill the UI with its time.
     val hasAlarm = persisted.isNotEmpty()
 
-    // Initialize selection from persisted alarm; re-run when persisted changes
-    var selectedHour by remember(persisted) {
-        mutableIntStateOf(persisted.firstOrNull()?.hour ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
+    // Read-only derived display time from persisted alarm (or current time as fallback)
+    val displayTime = derivedStateOf {
+        persisted.firstOrNull()?.let { it.hour to it.minute }
+            ?: (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) to Calendar.getInstance().get(Calendar.MINUTE))
     }
-    var selectedMinute by remember(persisted) {
-        mutableIntStateOf(persisted.firstOrNull()?.minute ?: Calendar.getInstance().get(Calendar.MINUTE))
+
+    // Mutable editor state — initialized once, synced from displayTime when persisted changes
+    var selectedHour by remember { mutableIntStateOf(displayTime.value.first) }
+    var selectedMinute by remember { mutableIntStateOf(displayTime.value.second) }
+
+    LaunchedEffect(persisted) {
+        selectedHour = displayTime.value.first
+        selectedMinute = displayTime.value.second
     }
 
     Column(
