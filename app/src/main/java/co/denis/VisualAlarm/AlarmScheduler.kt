@@ -95,10 +95,9 @@ class AlarmScheduler(private val context: Context) {
     /**
      * Derive a stable request code from alarmId.
      * Uses hashCode to produce a deterministic int that survives process death.
-     * The low 16 bits are used since PendingIntent requestCode is 16-bit on some APIs.
      */
     private fun requestCodeFromAlarmId(alarmId: String): Int {
-        return alarmId.hashCode().xor(System.identityHashCode(context)).and(0xFFFF)
+        return alarmId.hashCode().xor(System.identityHashCode(context))
     }
 
     companion object {
