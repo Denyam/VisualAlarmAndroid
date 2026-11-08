@@ -5,7 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -38,7 +38,14 @@ class AlarmStore(private val context: Context) {
     private val _alarms = MutableStateFlow(emptyList<StoredAlarm>())
     val alarms: StateFlow<List<StoredAlarm>> = _alarms
     private val lock = ReentrantLock()
-    private val persistScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+
+    // Actor for serialized async persistence
+    private val persistChannel = Channel<List<StoredAlarm>>(Channel.UNLIMITED)
+    private val persistJob = CoroutineScope(Dispatchers.IO).launch {
+        for (alarms in persistChannel) {
+            persistToDisk(alarms)
+        }
+    }
 
     init {
         _alarms.value = when (val result = loadAllSync()) {
@@ -54,7 +61,7 @@ class AlarmStore(private val context: Context) {
             all.removeIf { it.id == alarm.id }
             all.add(alarm)
             _alarms.value = all
-            persist(all)
+            persistChannel.trySend(all)
         } finally {
             lock.unlock()
         }
@@ -65,7 +72,7 @@ class AlarmStore(private val context: Context) {
         try {
             val filtered = _alarms.value.filterNot { it.id == id }
             _alarms.value = filtered
-            persist(filtered)
+            persistChannel.trySend(filtered)
         } finally {
             lock.unlock()
         }
@@ -75,7 +82,7 @@ class AlarmStore(private val context: Context) {
         lock.lock()
         try {
             _alarms.value = emptyList()
-            persist(emptyList())
+            persistChannel.trySend(emptyList())
         } finally {
             lock.unlock()
         }
@@ -105,23 +112,28 @@ class AlarmStore(private val context: Context) {
         }
     }
 
-    private fun persist(alarms: List<StoredAlarm>) {
-        persistScope.launch {
-            val array = JSONArray()
-            alarms.forEach { alarm ->
-                val obj = JSONObject().apply {
-                    put("id", alarm.id)
-                    put("hour", alarm.hour)
-                    put("minute", alarm.minute)
-                    put("enabled", alarm.enabled)
-                }
-                array.put(obj)
+    // Runs on Dispatchers.IO, sequentially, in send order
+    private suspend fun persistToDisk(alarms: List<StoredAlarm>) {
+        val array = JSONArray()
+        alarms.forEach { alarm ->
+            val obj = JSONObject().apply {
+                put("id", alarm.id)
+                put("hour", alarm.hour)
+                put("minute", alarm.minute)
+                put("enabled", alarm.enabled)
             }
-            val success = prefs.edit().putString(KEY_ALARMS_JSON, array.toString()).commit()
-            if (!success) {
-                Log.e("AlarmStore", "Failed to persist alarms")
-            }
+            array.put(obj)
         }
+        val success = prefs.edit().putString(KEY_ALARMS_JSON, array.toString()).commit()
+        if (!success) {
+            Log.e("AlarmStore", "Failed to persist alarms")
+        }
+    }
+
+    /** Call when the store is no longer needed to release resources. */
+    fun shutdown() {
+        persistJob.cancel()
+        persistChannel.close()
     }
 }
 
