@@ -18,10 +18,10 @@ class AlarmScheduler(private val context: Context) {
      * The action is part of the PendingIntent's identity, so schedule and
      * cancel must use the exact same identifier for the alarm to be cancellable.
      */
-    fun schedule(alarmId: String, hour: Int, minute: Int): Boolean {
+    fun schedule(alarm: StoredAlarm): Boolean {
         val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
+            set(Calendar.HOUR_OF_DAY, alarm.hour.value)
+            set(Calendar.MINUTE, alarm.minute.value)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
@@ -31,8 +31,8 @@ class AlarmScheduler(private val context: Context) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        val pendingIntent = buildPendingIntent(alarmId)
-        val showIntent = buildShowIntent(alarmId)
+        val pendingIntent = buildPendingIntent(alarm.id)
+        val showIntent = buildShowIntent(alarm.id)
         val triggerTime = calendar.timeInMillis
 
         return try {
@@ -53,9 +53,9 @@ class AlarmScheduler(private val context: Context) {
      * Cancels both the broadcast PendingIntent and the show intent
      * to remove the status bar icon.
      */
-    fun cancel(alarmId: String) {
-        alarmManager.cancel(buildPendingIntent(alarmId))
-        alarmManager.cancel(buildShowIntent(alarmId))
+    fun cancel(alarm: StoredAlarm) {
+        alarmManager.cancel(buildPendingIntent(alarm.id))
+        alarmManager.cancel(buildShowIntent(alarm.id))
     }
 
     private fun buildPendingIntent(alarmId: String): PendingIntent {

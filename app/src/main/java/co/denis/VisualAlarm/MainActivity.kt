@@ -162,11 +162,11 @@ class MainActivity : ComponentActivity() {
 
         val alarm = StoredAlarm(
             id = UUID.randomUUID().toString(),
-            hour = hour,
-            minute = minute,
+            hour = Hour.require(hour),
+            minute = Minute.require(minute),
             enabled = true
         )
-        val success = AlarmScheduler(this).schedule(alarm.id, hour, minute)
+        val success = AlarmScheduler(this).schedule(alarm)
         if (success) {
             alarmStore.save(alarm)
         } else {
@@ -186,7 +186,7 @@ class MainActivity : ComponentActivity() {
     private fun onCancelAlarm() {
         // Cancel each saved alarm by its id, then wipe the stored copy.
         alarmStore.loadAll().forEach { alarm ->
-            AlarmScheduler(this).cancel(alarm.id)
+            AlarmScheduler(this).cancel(alarm)
         }
         alarmStore.clear()
         autoLaunchedSettings.clear()
@@ -213,7 +213,7 @@ private fun AlarmSetScreen(
 
     // Read-only derived display time from persisted alarm (or current time as fallback)
     val displayTime = derivedStateOf {
-        persisted.firstOrNull()?.let { it.hour to it.minute }
+        persisted.firstOrNull()?.let { it.hour.value to it.minute.value }
             ?: (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) to Calendar.getInstance().get(Calendar.MINUTE))
     }
 

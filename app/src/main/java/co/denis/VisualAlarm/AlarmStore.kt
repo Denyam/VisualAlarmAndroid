@@ -18,10 +18,27 @@ import java.util.concurrent.locks.ReentrantLock
  * Persisted alarm metadata stored on disk so alarms survive process death and
  * reboots. [alarms] exposes the current list as a StateFlow for reactive UI.
  */
+
+@JvmInline
+value class Hour private constructor(val value: Int) {
+    companion object {
+        fun create(hour: Int): Hour? = if (hour in 0..23) Hour(hour) else null
+        fun require(hour: Int): Hour = create(hour) ?: throw IllegalArgumentException("Invalid hour: $hour")
+    }
+}
+
+@JvmInline
+value class Minute private constructor(val value: Int) {
+    companion object {
+        fun create(minute: Int): Minute? = if (minute in 0..59) Minute(minute) else null
+        fun require(minute: Int): Minute = create(minute) ?: throw IllegalArgumentException("Invalid minute: $minute")
+    }
+}
+
 data class StoredAlarm(
     val id: String,
-    val hour: Int,
-    val minute: Int,
+    val hour: Hour,
+    val minute: Minute,
     val enabled: Boolean = true
 )
 
@@ -96,14 +113,20 @@ class AlarmStore(private val context: Context) {
         val jsonString = prefs.getString(KEY_ALARMS_JSON, null) ?: return LoadAlarmsResult.Success(emptyList())
         return try {
             val array = JSONArray(jsonString)
-            val alarms = (0 until array.length()).map { idx ->
+            val alarms = mutableListOf<StoredAlarm>()
+            for (idx in 0 until array.length()) {
                 val obj = array.getJSONObject(idx)
-                StoredAlarm(
-                    id = obj.getString("id"),
-                    hour = obj.getInt("hour"),
-                    minute = obj.getInt("minute"),
-                    enabled = obj.optBoolean("enabled", true)
-                )
+                // Safe extraction with validation - skip invalid entries
+                val id = obj.optString("id", "").takeIf { it.isNotBlank() } ?: continue
+                val hour = Hour.create(obj.optInt("hour", -1))
+                val minute = Minute.create(obj.optInt("minute", -1))
+                val enabled = obj.optBoolean("enabled", true)
+
+                if (hour != null && minute != null) {
+                    alarms.add(StoredAlarm(id, hour, minute, enabled))
+                } else {
+                    Log.w("AlarmStore", "Skipping invalid alarm at index $idx: hour=${obj.optInt("hour", -1)}, minute=${obj.optInt("minute", -1)}")
+                }
             }
             LoadAlarmsResult.Success(alarms)
         } catch (e: JSONException) {
@@ -118,8 +141,8 @@ class AlarmStore(private val context: Context) {
         alarms.forEach { alarm ->
             val obj = JSONObject().apply {
                 put("id", alarm.id)
-                put("hour", alarm.hour)
-                put("minute", alarm.minute)
+                put("hour", alarm.hour.value)
+                put("minute", alarm.minute.value)
                 put("enabled", alarm.enabled)
             }
             array.put(obj)
