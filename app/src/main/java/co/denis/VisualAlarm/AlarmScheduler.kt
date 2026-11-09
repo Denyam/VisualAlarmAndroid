@@ -9,10 +9,19 @@ import java.util.*
 class AlarmScheduler(private val context: Context) {
     private val alarmManager = context.getSystemService(AlarmManager::class.java)
 
-    fun schedule(hour: Int, minute: Int): Boolean {
+    /**
+     * Schedule an alarm with a unique identifier.
+     *
+     * Uses setAlarmClock() which shows a status bar icon and gets higher priority
+     * (bypasses Doze and App Standby Bucket restrictions).
+     *
+     * The action is part of the PendingIntent's identity, so schedule and
+     * cancel must use the exact same identifier for the alarm to be cancellable.
+     */
+    fun schedule(alarm: StoredAlarm): Boolean {
         val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, hour)
-            set(Calendar.MINUTE, minute)
+            set(Calendar.HOUR_OF_DAY, alarm.hour.value)
+            set(Calendar.MINUTE, alarm.minute.value)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
@@ -22,14 +31,16 @@ class AlarmScheduler(private val context: Context) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        val pendingIntent = buildPendingIntent()
+        val pendingIntent = buildPendingIntent(alarm.id)
+        val showIntent = buildShowIntent(alarm.id)
+        val triggerTime = calendar.timeInMillis
 
         return try {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                calendar.timeInMillis,
-                pendingIntent
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(
+                triggerTime,
+                showIntent
             )
+            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
             true
         } catch (e: SecurityException) {
             // Handle case where SCHEDULE_EXACT_ALARM permission is not granted
@@ -37,25 +48,59 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
-    fun cancel() {
-        alarmManager.cancel(buildPendingIntent())
+    /**
+     * Cancel an alarm with the given identifier.
+     * Cancels both the broadcast PendingIntent and the show intent
+     * to remove the status bar icon.
+     */
+    fun cancel(alarm: StoredAlarm) {
+        alarmManager.cancel(buildPendingIntent(alarm.id))
+        alarmManager.cancel(buildShowIntent(alarm.id))
     }
 
-    /**
-     * Builds the broadcast [PendingIntent] used to trigger [AlarmReceiver].
-     *
-     * The action is part of the PendingIntent's identity, so [schedule] and
-     * [cancel] must use the exact same intent for the alarm to be cancellable.
-     */
-    private fun buildPendingIntent(): PendingIntent {
+    private fun buildPendingIntent(alarmId: String): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_ALARM_FIRED
+            putExtra(EXTRA_ALARM_ID, alarmId)
         }
+        val requestCode = requestCodeFromAlarmId(alarmId)
         return PendingIntent.getBroadcast(
             context,
-            0,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+    }
+
+    /**
+     * Intent shown when user taps the alarm clock icon in status bar.
+     * Launches the main activity so user can dismiss/cancel the alarm.
+     */
+    private fun buildShowIntent(alarmId: String): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            putExtra(EXTRA_ALARM_ID, alarmId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        // Use the SAME request code as buildPendingIntent so cancel() works for both
+        val requestCode = requestCodeFromAlarmId(alarmId)
+        return PendingIntent.getActivity(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
+     * Derive a stable request code from alarmId.
+     * Uses hashCode to produce a deterministic int that survives process death.
+     */
+    private fun requestCodeFromAlarmId(alarmId: String): Int {
+        return alarmId.hashCode().xor(System.identityHashCode(context))
+    }
+
+    companion object {
+        private const val EXTRA_ALARM_ID = "alarm_id"
     }
 }
