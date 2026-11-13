@@ -58,6 +58,20 @@ class AlarmScheduler(private val context: Context) {
         alarmManager.cancel(buildShowIntent(alarm.id))
     }
 
+    /**
+     * Update the system alarm scheduler to match the alarm's enabled state.
+     * Schedules if enabled, cancels if disabled.
+     * Returns true if the operation succeeded.
+     */
+    fun updateEnabled(alarm: StoredAlarm): Boolean {
+        return if (alarm.enabled) {
+            schedule(alarm)
+        } else {
+            cancel(alarm)
+            true
+        }
+    }
+
     private fun buildPendingIntent(alarmId: String): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_ALARM_FIRED
