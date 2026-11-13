@@ -20,6 +20,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -218,14 +219,9 @@ private fun AlarmSetScreen(
     // Current enabled state from persisted alarm
     val isEnabled = persisted.firstOrNull()?.enabled ?: false
 
-    // Mutable editor state — initialized once, synced from displayTime when persisted changes
-    var selectedHour by remember { mutableIntStateOf(displayTime.value.first) }
-    var selectedMinute by remember { mutableIntStateOf(displayTime.value.second) }
-
-    LaunchedEffect(persisted) {
-        selectedHour = displayTime.value.first
-        selectedMinute = displayTime.value.second
-    }
+    // Mutable editor state — initialized once from persisted, then preserved across recompositions
+    var selectedHour by rememberSaveable { mutableIntStateOf(displayTime.value.first) }
+    var selectedMinute by rememberSaveable { mutableIntStateOf(displayTime.value.second) }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -252,13 +248,29 @@ private fun AlarmSetScreen(
                 { _, hour, minute ->
                     selectedHour = hour
                     selectedMinute = minute
-                    // Update the stored alarm with new time (if exists)
+                    // Update the stored alarm with new time
                     persisted.firstOrNull()?.let { alarm ->
+                        // Disarm former alarm (cancel system alarm)
+                        AlarmScheduler(context).cancel(alarm)
+                        // Save with new time, preserving enabled state
                         val updatedAlarm = alarm.copy(
                             hour = Hour.require(hour),
                             minute = Minute.require(minute)
                         )
                         alarmStore.save(updatedAlarm)
+                        // If alarm was enabled, re-arm with new time
+                        if (updatedAlarm.enabled) {
+                            val success = AlarmScheduler(context).schedule(updatedAlarm)
+                            if (!success) {
+                                // Revert to disabled on failure
+                                alarmStore.save(updatedAlarm.copy(enabled = false))
+                                Toast.makeText(
+                                    context,
+                                    "Failed to set alarm. Check permissions.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     }
                 },
                 selectedHour,
