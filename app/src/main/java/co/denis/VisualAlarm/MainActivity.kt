@@ -164,6 +164,9 @@ class MainActivity : ComponentActivity() {
             alarmStore.save(alarm.copy(enabled = false))
         }
         pendingAlarmToEnable = null
+        lifecycleScope.launch {
+            isPermissionFlowRunning.value = false
+        }
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
@@ -189,7 +192,6 @@ class MainActivity : ComponentActivity() {
             ).show()
         }
         lifecycleScope.launch {
-            delay(Duration.ofSeconds(2))
             isPermissionFlowRunning.value = false
         }
     }
