@@ -110,6 +110,9 @@ class MainActivity : ComponentActivity() {
         } else if (awaitingSettingsReturn) {
             awaitingSettingsReturn = false
             continuePermissionFlow()
+        } else if (permissions.allRequiredPermissionsGranted()) {
+            // App resumed with permissions already granted - ensure all enabled alarms are scheduled
+            scheduleAllEnabledAlarms()
         }
     }
 
@@ -134,6 +137,19 @@ class MainActivity : ComponentActivity() {
         }
         // All permissions granted - schedule the pending alarm
         schedulePendingAlarm()
+        // Also schedule any other enabled alarms from store (e.g. after process death)
+        scheduleAllEnabledAlarms()
+    }
+
+    /**
+     * Schedules all enabled alarms from the store.
+     * Used to re-arm alarms after process death or when permissions become granted.
+     */
+    private fun scheduleAllEnabledAlarms() {
+        val alarms = alarmStore.loadAll().filter { it.enabled }
+        for (alarm in alarms) {
+            tryScheduleAlarm(alarm)
+        }
     }
 
     private fun launchSettings(intent: Intent) {
@@ -179,7 +195,7 @@ class MainActivity : ComponentActivity() {
         val alarm = pendingAlarmToEnable ?: return
         pendingAlarmToEnable = null
 
-        val success = AlarmScheduler(this).schedule(alarm)
+        val success = tryScheduleAlarm(alarm)
         if (success) {
             alarmStore.save(alarm)
         } else {
@@ -199,6 +215,13 @@ class MainActivity : ComponentActivity() {
     private fun clearPendingAlarm() {
         pendingAlarmToEnable = null
     }
+
+    /**
+     * Attempts to schedule an alarm.
+     * Returns true if successful.
+     */
+    private fun tryScheduleAlarm(alarm: StoredAlarm): Boolean =
+        AlarmScheduler(this).schedule(alarm)
 
     /**
      * Unified method to update alarm state (enabled, hour, minute).

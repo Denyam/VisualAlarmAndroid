@@ -51,4 +51,10 @@ class AlarmPermissions(private val context: Context) {
             Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
             Uri.parse("package:${context.packageName}")
         )
+
+    /** Checks if all required permissions for alarm scheduling are granted. */
+    fun allRequiredPermissionsGranted(): Boolean =
+        hasPostNotificationsPermission() &&
+        canScheduleExactAlarms() &&
+        canUseFullScreenIntent()
 }

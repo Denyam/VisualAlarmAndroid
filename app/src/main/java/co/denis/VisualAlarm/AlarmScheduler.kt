@@ -111,7 +111,7 @@ class AlarmScheduler(private val context: Context) {
      * Uses hashCode to produce a deterministic int that survives process death.
      */
     private fun requestCodeFromAlarmId(alarmId: String): Int {
-        return alarmId.hashCode().xor(System.identityHashCode(context))
+        return alarmId.hashCode()
     }
 
     companion object {
