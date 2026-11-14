@@ -90,8 +90,12 @@ class AlarmStore(private val context: Context) {
             } else {
                 alarm
             }
-            all.removeIf { it.id == alarmToSave.id }
-            all.add(alarmToSave)
+            val index = all.indexOfFirst { it.id == alarmToSave.id }
+            if (index >= 0) {
+                all[index] = alarmToSave
+            } else {
+                all.add(alarmToSave)
+            }
             _alarms.value = all
             persistChannel.trySend(all)
         } finally {
@@ -122,6 +126,9 @@ class AlarmStore(private val context: Context) {
 
     /** Synchronous load for initialisation or non-reactive callers. */
     fun loadAll(): List<StoredAlarm> = _alarms.value
+
+    /** Retrieve a single alarm by its ID. */
+    fun getAlarmById(id: String): StoredAlarm? = _alarms.value.firstOrNull { it.id == id }
 
     /** Load alarms from disk, returning a Result to surface parse errors. */
     fun loadAllSync(): LoadAlarmsResult {

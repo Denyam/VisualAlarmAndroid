@@ -52,7 +52,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val alarmId = broadcastIntent.getStringExtra(EXTRA_ALARM_ID)
         if (alarmId != null) {
             val store = (context.applicationContext as AlarmApplication).alarmStore
-            store.loadAll().firstOrNull { it.id == alarmId }?.let { alarm ->
+            store.getAlarmById(alarmId)?.let { alarm ->
                 store.save(alarm.copy(enabled = false))
             }
         }
