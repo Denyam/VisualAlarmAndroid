@@ -1,7 +1,6 @@
 package co.denis.VisualAlarm
 
 import android.Manifest
-import android.app.TimePickerDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
@@ -9,33 +8,32 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
+import co.denis.VisualAlarm.AlarmScheduler
+import co.denis.VisualAlarm.AlarmStore
+import co.denis.VisualAlarm.Hour
+import co.denis.VisualAlarm.Minute
+import co.denis.VisualAlarm.StoredAlarm
+import co.denis.VisualAlarm.ui.alarm.AlarmItem
+import co.denis.VisualAlarm.ui.alarm.AlarmSetScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
+import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.util.Calendar
-import java.util.Locale
-import java.util.UUID
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var permissions: AlarmPermissions
     private val alarmStore: AlarmStore by lazy { (applicationContext as AlarmApplication).alarmStore }
 
-    // Time of the alarm the user asked for; non-null while the permission
-    // chain is still running for a "SET ALARM" tap.
-    private var pendingHour: Int? = null
-    private var pendingMinute: Int? = null
+    // Alarm pending to be scheduled via the permission flow (when user sets a new alarm or toggles switch ON)
+    private var pendingAlarmToEnable: StoredAlarm? = null
 
     // Loop guard: settings screens auto-opened since the last explicit user
     // action (launch or SET ALARM tap). Each step gets one automatic attempt;
@@ -44,6 +42,10 @@ class MainActivity : ComponentActivity() {
     private val autoLaunchedSettings = mutableSetOf<String>()
     private var awaitingSettingsReturn = false
     private var launchFlowDone = false
+
+    // Tracks if permission flow is running (for UI loading indicator)
+    var isPermissionFlowRunning = mutableStateOf(false)
+        private set
 
     private val postNotificationsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -73,10 +75,9 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 AlarmSetScreen(
                     alarmStore = alarmStore,
-                    onSetAlarm = { hour, minute ->
-                        onSetAlarmClicked(hour, minute)
-                    },
-                    onCancelAlarm = { onCancelAlarm() }
+                    onToggleAlarm = { alarmId, enabled -> onToggleAlarm(alarmId, enabled) },
+                    onAlarmUpdate = { alarmId, enabled, hour, minute -> onAlarmUpdate(alarmId, enabled, hour, minute) },
+                    isPermissionFlowRunning = isPermissionFlowRunning.value
                 )
             }
         }
@@ -91,16 +92,10 @@ class MainActivity : ComponentActivity() {
         } else if (awaitingSettingsReturn) {
             awaitingSettingsReturn = false
             continuePermissionFlow()
+        } else if (permissions.allRequiredPermissionsGranted()) {
+            // App resumed with permissions already granted - ensure all enabled alarms are scheduled
+            scheduleAllEnabledAlarms()
         }
-    }
-
-    private fun onSetAlarmClicked(hour: Int, minute: Int) {
-        pendingHour = hour
-        pendingMinute = minute
-        // An explicit tap re-arms every settings step for one more automatic attempt.
-        autoLaunchedSettings.clear()
-        cameraPermissionRequested = false
-        continuePermissionFlow()
     }
 
     private fun continuePermissionFlow() {
@@ -122,7 +117,21 @@ class MainActivity : ComponentActivity() {
             cameraLauncher.launch(Manifest.permission.CAMERA)
             return
         }
-        schedulePendingAlarmIfAny()
+        // All permissions granted - schedule the pending alarm
+        schedulePendingAlarm()
+        // Also schedule any other enabled alarms from store (e.g. after process death)
+        scheduleAllEnabledAlarms()
+    }
+
+    /**
+     * Schedules all enabled alarms from the store.
+     * Used to re-arm alarms after process death or when permissions become granted.
+     */
+    private fun scheduleAllEnabledAlarms() {
+        val alarms = alarmStore.loadAll().filter { it.enabled }
+        for (alarm in alarms) {
+            tryScheduleAlarm(alarm)
+        }
     }
 
     private fun launchSettings(intent: Intent) {
@@ -148,125 +157,95 @@ class MainActivity : ComponentActivity() {
     private fun finishFlowIncomplete(message: String) {
         autoLaunchedSettings.clear()
         clearPendingAlarm()
+        // If we were trying to enable an alarm, revert it to disabled
+        pendingAlarmToEnable?.let { alarm ->
+            alarmStore.save(alarm.copy(enabled = false))
+        }
+        pendingAlarmToEnable = null
+        lifecycleScope.launch {
+            isPermissionFlowRunning.value = false
+        }
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
     /**
-     * Schedules [pendingHour]/[pendingMinute] via [AlarmScheduler] and persists
+     * Schedules the alarm in [pendingAlarmToEnable] via [AlarmScheduler] and persists
      * the result so it survives reboots and process death.
+     * On failure, reverts the alarm to disabled state.
      */
-    private fun schedulePendingAlarmIfAny() {
-        val hour = pendingHour ?: return
-        val minute = pendingMinute ?: return
-        clearPendingAlarm()
+    private fun schedulePendingAlarm() {
+        val alarm = pendingAlarmToEnable ?: return
+        pendingAlarmToEnable = null
 
-        val alarm = StoredAlarm(
-            id = UUID.randomUUID().toString(),
-            hour = Hour.require(hour),
-            minute = Minute.require(minute),
-            enabled = true
-        )
-        val success = AlarmScheduler(this).schedule(alarm)
+        val success = tryScheduleAlarm(alarm)
         if (success) {
             alarmStore.save(alarm)
         } else {
+            // Revert to disabled state
+            alarmStore.save(alarm.copy(enabled = false))
             Toast.makeText(
                 this,
                 "Failed to set alarm. Check permissions.",
                 Toast.LENGTH_SHORT
             ).show()
         }
+        lifecycleScope.launch {
+            isPermissionFlowRunning.value = false
+        }
     }
 
     private fun clearPendingAlarm() {
-        pendingHour = null
-        pendingMinute = null
+        pendingAlarmToEnable = null
     }
 
-    private fun onCancelAlarm() {
-        // Cancel each saved alarm by its id, then wipe the stored copy.
-        alarmStore.loadAll().forEach { alarm ->
-            AlarmScheduler(this).cancel(alarm)
-        }
-        alarmStore.clear()
-        autoLaunchedSettings.clear()
-        cameraPermissionRequested = false
-        pendingHour = null
-        pendingMinute = null
-    }
-}
+    /**
+     * Attempts to schedule an alarm.
+     * Returns true if successful.
+     */
+    private fun tryScheduleAlarm(alarm: StoredAlarm): Boolean =
+        AlarmScheduler(this).schedule(alarm)
 
-@Composable
-private fun AlarmSetScreen(
-    alarmStore: AlarmStore,
-    onSetAlarm: (Int, Int) -> Unit,
-    onCancelAlarm: () -> Unit
-) {
-    // Observe alarms from StateFlow - triggers recomposition on change.
-    val persisted by alarmStore.alarms.collectAsState()
-
-    // Get context for system dialogs and string resources
-    val context = LocalContext.current
-
-    // If we have a saved alarm, pre-fill the UI with its time.
-    val hasAlarm = persisted.isNotEmpty()
-
-    // Read-only derived display time from persisted alarm (or current time as fallback)
-    val displayTime = derivedStateOf {
-        persisted.firstOrNull()?.let { it.hour.value to it.minute.value }
-            ?: (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) to Calendar.getInstance().get(Calendar.MINUTE))
-    }
-
-    // Mutable editor state — initialized once, synced from displayTime when persisted changes
-    var selectedHour by remember { mutableIntStateOf(displayTime.value.first) }
-    var selectedMinute by remember { mutableIntStateOf(displayTime.value.second) }
-
-    LaunchedEffect(persisted) {
-        selectedHour = displayTime.value.first
-        selectedMinute = displayTime.value.second
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    /**
+     * Unified method to update alarm state (enabled, hour, minute) by ID.
+     * Handles permission flow when enabling, cancels when disabling.
+     */
+    private fun onAlarmUpdate(
+        alarmId: String,
+        newEnabled: Boolean? = null,
+        newHour: Int? = null,
+        newMinute: Int? = null
     ) {
-        Text(
-            text = if (persisted.isEmpty()) "Set Alarm" else "Alarm set",
-            style = MaterialTheme.typography.headlineMedium
-        )
+        val existingAlarm = alarmStore.getAlarmById(alarmId)
+            ?: return // Alarm not found, nothing to update
 
-        Text(
-            text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
-            style = MaterialTheme.typography.displayLarge
+        val updatedAlarm = existingAlarm.copy(
+            enabled = if (newEnabled != null) newEnabled else existingAlarm.enabled,
+            hour = if (newHour != null) Hour.require(newHour) else existingAlarm.hour,
+            minute = if (newMinute != null) Minute.require(newMinute) else existingAlarm.minute
         )
+        alarmStore.save(updatedAlarm)
 
-        Button(onClick = {
-            TimePickerDialog(
-                context,
-                { _, hour, minute ->
-                    selectedHour = hour
-                    selectedMinute = minute
-                },
-                selectedHour,
-                selectedMinute,
-                true
-            ).show()
-        }) {
-            Text(text = "Change Time")
+        // If alarm was enabled before, cancel old schedule
+        if (existingAlarm.enabled) {
+            AlarmScheduler(this).cancel(existingAlarm)
         }
 
-        Button(
-            onClick = { onSetAlarm(selectedHour, selectedMinute) },
-            enabled = !hasAlarm
-        ) {
-            Text(text = "SET ALARM")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = onCancelAlarm, enabled = hasAlarm) {
-            Text(text = context.getString(R.string.cancel_alarm))
+        // If now enabled, run permission flow to schedule
+        if (updatedAlarm.enabled) {
+            pendingAlarmToEnable = updatedAlarm
+            autoLaunchedSettings.clear()
+            cameraPermissionRequested = false
+            isPermissionFlowRunning.value = true
+            lifecycleScope.launch { continuePermissionFlow() }
+        } else {
+            // Just disabled - no permissions needed
+            pendingAlarmToEnable = null
+            isPermissionFlowRunning.value = false
         }
     }
+
+    private fun onToggleAlarm(alarmId: String, enabled: Boolean) {
+        onAlarmUpdate(alarmId, newEnabled = enabled)
+    }
+
 }

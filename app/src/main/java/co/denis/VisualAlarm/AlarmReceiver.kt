@@ -43,15 +43,18 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     /**
-     * The scheduled alarm has fired. Start the ring service then delete the
-     * stored alarm entry so the UI reports "alarm set" only while the user is
-     * still configuring the next one. Today alarms are one-shot.
+     * The scheduled alarm has fired. Start the ring service then update the
+     * stored alarm to disabled (enabled = false) so it survives reboots but
+     * won't re-arm automatically.
      */
     private fun startAlarmServiceAndClear(context: Context, broadcastIntent: Intent) {
         startAlarmService(context)
         val alarmId = broadcastIntent.getStringExtra(EXTRA_ALARM_ID)
         if (alarmId != null) {
-            (context.applicationContext as AlarmApplication).alarmStore.delete(alarmId)
+            val store = (context.applicationContext as AlarmApplication).alarmStore
+            store.getAlarmById(alarmId)?.let { alarm ->
+                store.save(alarm.copy(enabled = false))
+            }
         }
     }
 
