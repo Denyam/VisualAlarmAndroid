@@ -9,26 +9,39 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import co.denis.VisualAlarm.AlarmScheduler
 import co.denis.VisualAlarm.Hour
 import co.denis.VisualAlarm.Minute
 import co.denis.VisualAlarm.StoredAlarm
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.delay
+import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.util.Calendar
 import java.util.Locale
 
@@ -47,6 +60,10 @@ class MainActivity : ComponentActivity() {
     private val autoLaunchedSettings = mutableSetOf<String>()
     private var awaitingSettingsReturn = false
     private var launchFlowDone = false
+
+    // Tracks if permission flow is running (for UI loading indicator)
+    var isPermissionFlowRunning = mutableStateOf(false)
+        private set
 
     private val postNotificationsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -76,7 +93,9 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 AlarmSetScreen(
                     alarmStore = alarmStore,
-                    onToggleAlarm = { enabled -> onToggleAlarm(enabled) }
+                    onToggleAlarm = { enabled -> onToggleAlarm(enabled) },
+                    onAlarmUpdate = { enabled, hour, minute -> onAlarmUpdate(enabled, hour, minute) },
+                    isPermissionFlowRunning = isPermissionFlowRunning.value
                 )
             }
         }
@@ -169,37 +188,67 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_SHORT
             ).show()
         }
+        lifecycleScope.launch {
+            delay(Duration.ofSeconds(2))
+            isPermissionFlowRunning.value = false
+        }
     }
 
     private fun clearPendingAlarm() {
         pendingAlarmToEnable = null
     }
 
-    private fun onToggleAlarm(enabled: Boolean) {
+    /**
+     * Unified method to update alarm state (enabled, hour, minute).
+     * Handles permission flow when enabling, cancels when disabling.
+     */
+    private fun onAlarmUpdate(
+        newEnabled: Boolean? = null,
+        newHour: Int? = null,
+        newMinute: Int? = null
+    ) {
         val alarm = alarmStore.loadAll().firstOrNull() ?: return
-        val updatedAlarm = alarm.copy(enabled = enabled)
 
-        // Save first (persists the new state)
+        // Build updated alarm
+        val updatedAlarm = alarm.copy(
+            enabled = if (newEnabled != null) newEnabled else alarm.enabled,
+            hour = if (newHour != null) Hour.require(newHour) else alarm.hour,
+            minute = if (newMinute != null) Minute.require(newMinute) else alarm.minute
+        )
+
+        // Save immediately
         alarmStore.save(updatedAlarm)
 
-        if (enabled) {
-            // Need permissions to schedule - store alarm and run permission flow
+        // If alarm was enabled before, cancel old schedule
+        if (alarm.enabled) {
+            AlarmScheduler(this).cancel(alarm)
+        }
+
+        // If now enabled, run permission flow to schedule
+        if (updatedAlarm.enabled) {
             pendingAlarmToEnable = updatedAlarm
             autoLaunchedSettings.clear()
             cameraPermissionRequested = false
-            continuePermissionFlow()
+            isPermissionFlowRunning.value = true
+            lifecycleScope.launch { continuePermissionFlow() }
         } else {
-            // Disabling doesn't need permissions, just cancel
-            AlarmScheduler(this).cancel(alarm)
+            // Just disabled - no permissions needed
             pendingAlarmToEnable = null
+            isPermissionFlowRunning.value = false
         }
+    }
+
+    private fun onToggleAlarm(enabled: Boolean) {
+        onAlarmUpdate(newEnabled = enabled)
     }
 }
 
 @Composable
 private fun AlarmSetScreen(
     alarmStore: AlarmStore,
-    onToggleAlarm: (Boolean) -> Unit
+    onToggleAlarm: (Boolean) -> Unit,
+    onAlarmUpdate: (Boolean?, Int?, Int?) -> Unit,
+    isPermissionFlowRunning: Boolean
 ) {
     // Observe alarms from StateFlow - triggers recomposition on change.
     val persisted by alarmStore.alarms.collectAsState()
@@ -223,81 +272,80 @@ private fun AlarmSetScreen(
     var selectedHour by rememberSaveable { mutableIntStateOf(displayTime.value.first) }
     var selectedMinute by rememberSaveable { mutableIntStateOf(displayTime.value.second) }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = if (hasAlarm) {
-                if (isEnabled) "Alarm ON" else "Alarm OFF"
-            } else {
-                "Alarm OFF"
-            },
-            style = MaterialTheme.typography.headlineMedium
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = if (hasAlarm) {
+                    if (isEnabled) "Alarm ON" else "Alarm OFF"
+                } else {
+                    "Alarm OFF"
+                },
+                style = MaterialTheme.typography.headlineMedium
+            )
 
-        Text(
-            text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
-            style = MaterialTheme.typography.displayLarge
-        )
+            Text(
+                text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
+                style = MaterialTheme.typography.displayLarge
+            )
 
-        Button(onClick = {
-            TimePickerDialog(
-                context,
-                { _, hour, minute ->
-                    selectedHour = hour
-                    selectedMinute = minute
-                    // Update the stored alarm with new time
-                    persisted.firstOrNull()?.let { alarm ->
-                        // Disarm former alarm (cancel system alarm)
-                        AlarmScheduler(context).cancel(alarm)
-                        // Save with new time, preserving enabled state
-                        val updatedAlarm = alarm.copy(
-                            hour = Hour.require(hour),
-                            minute = Minute.require(minute)
-                        )
-                        alarmStore.save(updatedAlarm)
-                        // If alarm was enabled, re-arm with new time
-                        if (updatedAlarm.enabled) {
-                            val success = AlarmScheduler(context).schedule(updatedAlarm)
-                            if (!success) {
-                                // Revert to disabled on failure
-                                alarmStore.save(updatedAlarm.copy(enabled = false))
-                                Toast.makeText(
-                                    context,
-                                    "Failed to set alarm. Check permissions.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
+            Button(
+                onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hour, minute ->
+                            selectedHour = hour
+                            selectedMinute = minute
+                            onAlarmUpdate(null, hour, minute)
+                        },
+                        selectedHour,
+                        selectedMinute,
+                        true
+                    ).show()
+                },
+                enabled = !isPermissionFlowRunning
+            ) {
+                Text(text = "Change Time")
+            }
+
+            androidx.compose.material3.Switch(
+                checked = isEnabled,
+                onCheckedChange = if (isPermissionFlowRunning) null else { enabled ->
+                    if (enabled && !hasAlarm) {
+                        // Create new alarm with current time and enable it
+                        onAlarmUpdate(true, selectedHour, selectedMinute)
+                    } else {
+                        onAlarmUpdate(enabled, null, null)
                     }
                 },
-                selectedHour,
-                selectedMinute,
-                true
-            ).show()
-        }) {
-            Text(text = "Change Time")
+                enabled = !isPermissionFlowRunning
+            )
         }
 
-        androidx.compose.material3.Switch(
-            checked = isEnabled,
-            onCheckedChange = { enabled ->
-                if (enabled && !hasAlarm) {
-                    // Create new alarm with current time and enable it
-                    val alarm = StoredAlarm(
-                        id = java.util.UUID.randomUUID().toString(),
-                        hour = Hour.require(selectedHour),
-                        minute = Minute.require(selectedMinute),
-                        enabled = true
+        // Loading overlay during permission flow
+        if (isPermissionFlowRunning) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(color = Color.White)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Setting up alarm...",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyLarge
                     )
-                    alarmStore.save(alarm)
-                    onToggleAlarm(true)
-                } else {
-                    onToggleAlarm(enabled)
                 }
             }
-        )
+        }
     }
 }
