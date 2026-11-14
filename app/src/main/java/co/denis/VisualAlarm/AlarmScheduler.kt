@@ -31,8 +31,8 @@ class AlarmScheduler(private val context: Context) {
             calendar.add(Calendar.DAY_OF_MONTH, 1)
         }
 
-        val pendingIntent = buildPendingIntent(alarm.id)
-        val showIntent = buildShowIntent(alarm.id)
+        val pendingIntent = buildPendingIntent(alarm)
+        val showIntent = buildShowIntent(alarm)
         val triggerTime = calendar.timeInMillis
 
         return try {
@@ -54,8 +54,8 @@ class AlarmScheduler(private val context: Context) {
      * to remove the status bar icon.
      */
     fun cancel(alarm: StoredAlarm) {
-        alarmManager.cancel(buildPendingIntent(alarm.id))
-        alarmManager.cancel(buildShowIntent(alarm.id))
+        alarmManager.cancel(buildPendingIntent(alarm))
+        alarmManager.cancel(buildShowIntent(alarm))
     }
 
     /**
@@ -72,15 +72,14 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
-    private fun buildPendingIntent(alarmId: String): PendingIntent {
+    private fun buildPendingIntent(alarm: StoredAlarm): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             action = AlarmReceiver.ACTION_ALARM_FIRED
-            putExtra(EXTRA_ALARM_ID, alarmId)
+            putExtra(EXTRA_ALARM_ID, alarm.id)
         }
-        val requestCode = requestCodeFromAlarmId(alarmId)
         return PendingIntent.getBroadcast(
             context,
-            requestCode,
+            alarm.requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -90,28 +89,19 @@ class AlarmScheduler(private val context: Context) {
      * Intent shown when user taps the alarm clock icon in status bar.
      * Launches the main activity so user can dismiss/cancel the alarm.
      */
-    private fun buildShowIntent(alarmId: String): PendingIntent {
+    private fun buildShowIntent(alarm: StoredAlarm): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            putExtra(EXTRA_ALARM_ID, alarmId)
+            putExtra(EXTRA_ALARM_ID, alarm.id)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
         // Use the SAME request code as buildPendingIntent so cancel() works for both
-        val requestCode = requestCodeFromAlarmId(alarmId)
         return PendingIntent.getActivity(
             context,
-            requestCode,
+            alarm.requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-    }
-
-    /**
-     * Derive a stable request code from alarmId.
-     * Uses hashCode to produce a deterministic int that survives process death.
-     */
-    private fun requestCodeFromAlarmId(alarmId: String): Int {
-        return alarmId.hashCode()
     }
 
     companion object {

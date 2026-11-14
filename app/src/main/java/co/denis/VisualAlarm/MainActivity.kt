@@ -226,28 +226,44 @@ class MainActivity : ComponentActivity() {
     /**
      * Unified method to update alarm state (enabled, hour, minute).
      * Handles permission flow when enabling, cancels when disabling.
+     * Creates a new alarm if one doesn't exist yet.
      */
     private fun onAlarmUpdate(
         newEnabled: Boolean? = null,
         newHour: Int? = null,
         newMinute: Int? = null
     ) {
-        val alarm = alarmStore.loadAll().firstOrNull() ?: return
-
-        // Build updated alarm
-        val updatedAlarm = alarm.copy(
-            enabled = if (newEnabled != null) newEnabled else alarm.enabled,
-            hour = if (newHour != null) Hour.require(newHour) else alarm.hour,
-            minute = if (newMinute != null) Minute.require(newMinute) else alarm.minute
-        )
-
-        // Save immediately
-        alarmStore.save(updatedAlarm)
+        val existingAlarm = alarmStore.loadAll().firstOrNull()
+        
+        val updatedAlarm: StoredAlarm
+        if (existingAlarm != null) {
+            // Update existing alarm
+            updatedAlarm = existingAlarm.copy(
+                enabled = if (newEnabled != null) newEnabled else existingAlarm.enabled,
+                hour = if (newHour != null) Hour.require(newHour) else existingAlarm.hour,
+                minute = if (newMinute != null) Minute.require(newMinute) else existingAlarm.minute
+            )
+            alarmStore.save(updatedAlarm)
+        } else {
+            // No alarm exists yet - create new one
+            val hour = newHour ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            val minute = newMinute ?: Calendar.getInstance().get(Calendar.MINUTE)
+            val enabled = if (newEnabled != null) newEnabled else true
+            
+            // Create alarm with requestCode assigned by store
+            val alarm = StoredAlarm(
+                id = java.util.UUID.randomUUID().toString(),
+                requestCode = 0, // Will be assigned by store on save
+                hour = Hour.require(hour),
+                minute = Minute.require(minute),
+                enabled = enabled
+            )
+            alarmStore.save(alarm)
+            updatedAlarm = alarm
+        }
 
         // If alarm was enabled before, cancel old schedule
-        if (alarm.enabled) {
-            AlarmScheduler(this).cancel(alarm)
-        }
+        existingAlarm?.let { if (it.enabled) AlarmScheduler(this).cancel(it) }
 
         // If now enabled, run permission flow to schedule
         if (updatedAlarm.enabled) {
