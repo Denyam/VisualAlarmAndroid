@@ -40,8 +40,9 @@ jobs:
     - name: Send APK Link to Telegram
       run: |
           APK_URL="https://github.com/${{ github.repository }}/releases/download/build-${{ github.run_number }}/app-debug.apk"
-          MESSAGE="New APK Build Ready!
-          Commit: ${{ github.event.head_commit.message }}
+          MESSAGE="Вот будильник!
+          Build number: ${{ github.run_number }}
+          Commit: ${{ github.event.head_commit.id }}
           📥 [Download APK]($APK_URL)"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
