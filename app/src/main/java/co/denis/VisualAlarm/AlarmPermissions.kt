@@ -90,11 +90,16 @@ class AlarmPermissions(private val context: Context) {
             Uri.parse("package:${context.packageName}")
         )
 
-    /** Checks if all required permissions for alarm scheduling are granted. */
+    /** Checks if all required permissions for alarm scheduling are granted.
+     * Alarms work via either:
+     *   - Notification path: POST_NOTIFICATIONS + channel enabled + USE_FULL_SCREEN_INTENT
+     *   - Overlay fallback: SYSTEM_ALERT_WINDOW (canDrawOverlays)
+     * Plus SCHEDULE_EXACT_ALARM is always required.
+     */
     fun allRequiredPermissionsGranted(): Boolean =
-        hasPostNotificationsPermission() &&
-        isAlarmChannelEnabled() &&
         canScheduleExactAlarms() &&
-        canUseFullScreenIntent() &&
-        canDrawOverlays()
+        (
+            (hasPostNotificationsPermission() && isAlarmChannelEnabled() && canUseFullScreenIntent()) ||
+            canDrawOverlays()
+        )
 }
