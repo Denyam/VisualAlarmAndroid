@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Used to launch full-screen alarm when notifications are blocked (Android 10+). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Used by CameraManager.setTorchMode for the alarm torch strobe. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Required so the app receives BOOT_COMPLETED after a reboot -->

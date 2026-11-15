@@ -111,6 +111,14 @@ class MainActivity : ComponentActivity() {
             launchSettings(permissions.fullScreenIntentSettingsIntent())
             return
         }
+        if (!permissions.isAlarmChannelEnabled()) {
+            launchSettings(permissions.alarmChannelSettingsIntent())
+            return
+        }
+        if (!permissions.canDrawOverlays()) {
+            launchSettings(permissions.drawOverlaysSettingsIntent())
+            return
+        }
         if (!permissions.hasCameraPermission() && !cameraPermissionRequested) {
             // Best-effort: the callback continues the flow whether granted or not.
             cameraPermissionRequested = true

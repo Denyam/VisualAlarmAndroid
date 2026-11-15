@@ -13,8 +13,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import co.denis.VisualAlarm.AlarmPermissions
 
 /**
  * Foreground service that handles the alarm ringing.
@@ -31,7 +33,6 @@ class AlarmRingingService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "alarm_channel"
         private const val START_ACTION = "co.denis.VisualAlarm.action.START_ALARM"
         private const val SAFETY_TIMEOUT_MS = 5 * 60 * 1000L // 5 minutes
 
@@ -54,6 +55,7 @@ class AlarmRingingService : Service() {
     private var torchFlasher: TorchFlasher? = null
     private var safetyTimeoutRunnable: Runnable? = null
     private val handler = Handler(Looper.getMainLooper())
+    private val permissions = AlarmPermissions(this)
 
     override fun onCreate() {
         super.onCreate()
@@ -61,7 +63,19 @@ class AlarmRingingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // Start foreground with notification
+        // Check if notification will actually show (permission + channel enabled).
+        // If not, launch AlarmActivity directly since fullScreenIntent won't fire.
+        val canShowNotification = permissions.hasPostNotificationsPermission() && permissions.isAlarmChannelEnabled()
+        if (!canShowNotification) {
+            launchAlarmActivityDirectly()
+            Toast.makeText(
+                this,
+                "Alarm notifications blocked. Enable 'Alarm Notifications' in Settings for reliable alarms.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
+        // Start foreground with notification (still post as fallback if user re-enables channel)
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
@@ -86,6 +100,25 @@ class AlarmRingingService : Service() {
         }
 
         return START_NOT_STICKY
+    }
+
+    /**
+     * Launches AlarmActivity directly with full-screen intent flags.
+     * Used when notification channel is disabled (so fullScreenIntent won't fire).
+     */
+    private fun launchAlarmActivityDirectly() {
+        val intent = Intent(this, AlarmActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+            )
+        }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onDestroy() {
@@ -121,7 +154,7 @@ class AlarmRingingService : Service() {
     private fun buildNotification(): Notification {
         val pendingIntent = NotificationHelper.getAlarmPendingIntent(this)
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, AlarmPermissions.ALARM_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("Alarm")
             .setContentText("Your alarm is ringing!")
@@ -137,7 +170,7 @@ class AlarmRingingService : Service() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID,
+                AlarmPermissions.ALARM_CHANNEL_ID,
                 "Alarm Notifications",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
