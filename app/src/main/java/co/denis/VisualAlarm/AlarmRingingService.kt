@@ -1,8 +1,6 @@
 package co.denis.VisualAlarm
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -59,7 +57,7 @@ class AlarmRingingService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        NotificationHelper.createNotificationChannel(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -165,22 +163,6 @@ class AlarmRingingService : Service() {
             .setAutoCancel(false) // Don't auto-cancel; we manage it
             .setOngoing(true)
             .build()
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                AlarmPermissions.ALARM_CHANNEL_ID,
-                "Alarm Notifications",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Channel for Alarm notifications"
-                enableVibration(true)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
-        }
     }
 
     private fun startRingtone() {
