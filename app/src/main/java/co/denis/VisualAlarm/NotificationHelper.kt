@@ -9,7 +9,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
-    private const val CHANNEL_ID = "alarm_channel"
     private const val CHANNEL_NAME = "Alarm Notifications"
 
     fun createNotificationChannel(context: Context) {
@@ -17,7 +16,7 @@ object NotificationHelper {
             val name = CHANNEL_NAME
             val descriptionText = "Channel for Alarm notifications"
             val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
+            val channel = NotificationChannel(AlarmPermissions.ALARM_CHANNEL_ID, name, importance).apply {
                 description = descriptionText
                 setSound(null, null) // We handle sound in AlarmRingingService
                 enableVibration(true)
@@ -38,22 +37,5 @@ object NotificationHelper {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-    }
-
-    fun showAlarmNotification(context: Context) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val pendingIntent = getAlarmPendingIntent(context)
-
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Alarm")
-            .setContentText("Your alarm is ringing!")
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(pendingIntent, true)
-            .setAutoCancel(true)
-            .setOngoing(true)
-
-        notificationManager.notify(1, builder.build())
     }
 }

@@ -99,27 +99,57 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun continuePermissionFlow() {
-        if (!permissions.hasPostNotificationsPermission()) {
-            postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            return
-        }
+        // SCHEDULE_EXACT_ALARM is always required
         if (!permissions.canScheduleExactAlarms()) {
             launchSettings(permissions.exactAlarmSettingsIntent())
             return
         }
-        if (!permissions.canUseFullScreenIntent()) {
+
+        // Check notification path: POST_NOTIFICATIONS + channel + fullScreenIntent
+        val hasNotificationPermission = permissions.hasPostNotificationsPermission()
+        val channelEnabled = permissions.isAlarmChannelEnabled()
+        val hasFullScreenIntent = permissions.canUseFullScreenIntent()
+        val notificationPathWorks = hasNotificationPermission && channelEnabled && hasFullScreenIntent
+
+        // If notification path works, skip overlay permission
+        if (notificationPathWorks) {
+            continueCameraPermissionFlow()
+            return
+        }
+
+        // Notification path is broken - need overlay permission as fallback
+        if (!hasNotificationPermission) {
+            postNotificationsLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        if (!channelEnabled) {
+            launchSettings(permissions.alarmChannelSettingsIntent())
+            return
+        }
+        if (!hasFullScreenIntent) {
             launchSettings(permissions.fullScreenIntentSettingsIntent())
             return
         }
+
+        // Fallback to overlay permission
+        if (!permissions.canDrawOverlays()) {
+            launchSettings(permissions.drawOverlaysSettingsIntent())
+            return
+        }
+
+        continueCameraPermissionFlow()
+    }
+
+    private fun continueCameraPermissionFlow() {
+        // Best-effort camera
         if (!permissions.hasCameraPermission() && !cameraPermissionRequested) {
-            // Best-effort: the callback continues the flow whether granted or not.
             cameraPermissionRequested = true
             cameraLauncher.launch(Manifest.permission.CAMERA)
             return
         }
-        // All permissions granted - schedule the pending alarm
+
+        // All set - schedule alarm
         schedulePendingAlarm()
-        // Also schedule any other enabled alarms from store (e.g. after process death)
         scheduleAllEnabledAlarms()
     }
 
