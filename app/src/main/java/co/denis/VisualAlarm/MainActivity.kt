@@ -77,6 +77,8 @@ class MainActivity : ComponentActivity() {
                     alarmStore = alarmStore,
                     onToggleAlarm = { alarmId, enabled -> onToggleAlarm(alarmId, enabled) },
                     onAlarmUpdate = { alarmId, enabled, hour, minute -> onAlarmUpdate(alarmId, enabled, hour, minute) },
+                    onAddAlarm = { hour, minute -> onAddAlarm(hour, minute) },
+                    onDeleteAlarm = { alarmId -> onDeleteAlarm(alarmId) },
                     isPermissionFlowRunning = isPermissionFlowRunning.value
                 )
             }
@@ -276,6 +278,37 @@ class MainActivity : ComponentActivity() {
 
     private fun onToggleAlarm(alarmId: String, enabled: Boolean) {
         onAlarmUpdate(alarmId, newEnabled = enabled)
+    }
+
+    /**
+     * Creates a new enabled alarm via the store and runs the permission
+     * flow to schedule it. The store's returned instance carries the
+     * assigned requestCode, so it can be scheduled/cancelled correctly.
+     */
+    private fun onAddAlarm(hour: Int, minute: Int) {
+        pendingAlarmToEnable = alarmStore.create(hour, minute)
+        autoLaunchedSettings.clear()
+        cameraPermissionRequested = false
+        isPermissionFlowRunning.value = true
+        lifecycleScope.launch { continuePermissionFlow() }
+    }
+
+    /**
+     * Cancels the system alarm (if scheduled) and removes it from the store.
+     */
+    private fun onDeleteAlarm(alarmId: String) {
+        val alarm = alarmStore.getAlarmById(alarmId) ?: return
+
+        // If this alarm is waiting on the permission flow, abandon it.
+        if (pendingAlarmToEnable?.id == alarmId) {
+            pendingAlarmToEnable = null
+            isPermissionFlowRunning.value = false
+        }
+
+        if (alarm.enabled) {
+            AlarmScheduler(this).cancel(alarm)
+        }
+        alarmStore.delete(alarmId)
     }
 
 }

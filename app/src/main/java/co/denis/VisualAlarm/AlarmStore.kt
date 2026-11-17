@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.UUID
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.math.max
 
@@ -80,7 +81,27 @@ class AlarmStore(private val context: Context) {
         }
     }
 
-    fun save(alarm: StoredAlarm) {
+    /**
+     * Creates and persists a new enabled alarm at the given time.
+     * Assigns a unique id and lets [save] assign the requestCode, so the
+     * returned instance is ready to be scheduled.
+     */
+    fun create(hour: Int, minute: Int): StoredAlarm = save(
+        StoredAlarm(
+            id = UUID.randomUUID().toString(),
+            requestCode = 0, // Assigned by save()
+            hour = Hour.require(hour),
+            minute = Minute.require(minute),
+            enabled = true
+        )
+    )
+
+    /**
+     * Saves (inserts or updates) an alarm and returns the persisted instance.
+     * New alarms without a requestCode get one assigned here, so callers that
+     * need to schedule or cancel must use the returned value.
+     */
+    fun save(alarm: StoredAlarm): StoredAlarm {
         lock.lock()
         try {
             val all = _alarms.value.toMutableList()
@@ -98,6 +119,7 @@ class AlarmStore(private val context: Context) {
             }
             _alarms.value = all
             persistChannel.trySend(all)
+            return alarmToSave
         } finally {
             lock.unlock()
         }
