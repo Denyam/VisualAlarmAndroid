@@ -63,7 +63,7 @@ class AlarmStore(private val context: Context) {
     private var nextRequestCode: Int = prefs.getInt(KEY_NEXT_REQUEST_CODE, 1)
         set(value) {
             field = value
-            prefs.edit().putInt(KEY_NEXT_REQUEST_CODE, value).apply()
+            prefs.edit().putInt(KEY_NEXT_REQUEST_CODE, value).commit()
         }
 
     // Actor for serialized async persistence

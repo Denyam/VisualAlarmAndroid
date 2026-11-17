@@ -90,9 +90,11 @@ class MainActivity : ComponentActivity() {
         if (!launchFlowDone) {
             // First launch: walk the user through the permission wizard.
             launchFlowDone = true
+            isPermissionFlowRunning.value = true
             continuePermissionFlow()
         } else if (awaitingSettingsReturn) {
             awaitingSettingsReturn = false
+            isPermissionFlowRunning.value = true
             continuePermissionFlow()
         } else if (permissions.allRequiredPermissionsGranted()) {
             // App resumed with permissions already granted - ensure all enabled alarms are scheduled
@@ -206,22 +208,23 @@ class MainActivity : ComponentActivity() {
      * On failure, reverts the alarm to disabled state.
      */
     private fun schedulePendingAlarm() {
-        val alarm = pendingAlarmToEnable ?: return
-        pendingAlarmToEnable = null
+        try {
+            val alarm = pendingAlarmToEnable ?: return
+            pendingAlarmToEnable = null
 
-        val success = tryScheduleAlarm(alarm)
-        if (success) {
-            alarmStore.save(alarm)
-        } else {
-            // Revert to disabled state
-            alarmStore.save(alarm.copy(enabled = false))
-            Toast.makeText(
-                this,
-                "Failed to set alarm. Check permissions.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-        lifecycleScope.launch {
+            val success = tryScheduleAlarm(alarm)
+            if (success) {
+                alarmStore.save(alarm)
+            } else {
+                // Revert to disabled state
+                alarmStore.save(alarm.copy(enabled = false))
+                Toast.makeText(
+                    this,
+                    "Failed to set alarm. Check permissions.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } finally {
             isPermissionFlowRunning.value = false
         }
     }

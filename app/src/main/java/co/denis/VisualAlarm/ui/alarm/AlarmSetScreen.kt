@@ -2,6 +2,7 @@ package co.denis.VisualAlarm.ui.alarm
 
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,7 +111,10 @@ fun AlarmSetScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.8f)),
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    // Consume all touch input so taps can't fall through to the
+                    // alarm list / buttons underneath while the flow is running.
+                    .pointerInput(Unit) { detectTapGestures { } },
                 contentAlignment = Alignment.Center
             ) {
                 Column(
