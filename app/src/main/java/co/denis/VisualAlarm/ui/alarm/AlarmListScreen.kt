@@ -2,6 +2,7 @@ package co.denis.VisualAlarm.ui.alarm
 
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,27 +19,27 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.denis.VisualAlarm.AlarmStore
-import co.denis.VisualAlarm.StoredAlarm
-import co.denis.VisualAlarm.ui.alarm.AlarmItem
 import java.util.Calendar
 
 @Composable
-fun AlarmSetScreen(
+fun AlarmListScreen(
     alarmStore: AlarmStore,
     onToggleAlarm: (String, Boolean) -> Unit,
     onAlarmUpdate: (String, Boolean?, Int?, Int?) -> Unit,
     onAddAlarm: (Int, Int) -> Unit,
     onDeleteAlarm: (String) -> Unit,
-    isPermissionFlowRunning: Boolean
+    isPermissionFlowRunning: MutableState<Boolean>
 ) {
     val context = LocalContext.current
     // Observe alarms from StateFlow - triggers recomposition on change.
@@ -96,7 +97,7 @@ fun AlarmSetScreen(
                         true
                     ).show()
                 },
-                enabled = !isPermissionFlowRunning,
+                enabled = !isPermissionFlowRunning.value,
                 // Keep the button above the system gesture/navigation bar
                 modifier = Modifier.navigationBarsPadding()
             ) {
@@ -105,11 +106,14 @@ fun AlarmSetScreen(
         }
 
         // Loading overlay during permission flow
-        if (isPermissionFlowRunning) {
+        if (isPermissionFlowRunning.value) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.8f)),
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    // Consume all touch input so taps can't fall through to the
+                    // alarm list / buttons underneath while the flow is running.
+                    .pointerInput(Unit) { detectTapGestures { } },
                 contentAlignment = Alignment.Center
             ) {
                 Column(

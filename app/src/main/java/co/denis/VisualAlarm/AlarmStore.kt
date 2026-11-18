@@ -59,15 +59,14 @@ class AlarmStore(private val context: Context) {
     val alarms: StateFlow<List<StoredAlarm>> = _alarms
     private val lock = ReentrantLock()
 
-    // Counter for assigning unique request codes, persisted in SharedPreferences
     private var nextRequestCode: Int = prefs.getInt(KEY_NEXT_REQUEST_CODE, 1)
         set(value) {
             field = value
-            prefs.edit().putInt(KEY_NEXT_REQUEST_CODE, value).apply()
+            prefs.edit().putInt(KEY_NEXT_REQUEST_CODE, value).commit()
         }
 
     // Actor for serialized async persistence
-    private val persistChannel = Channel<List<StoredAlarm>>(Channel.UNLIMITED)
+    private val persistChannel = Channel<List<StoredAlarm>>(Channel.CONFLATED)
     private val persistJob = CoroutineScope(Dispatchers.IO).launch {
         for (alarms in persistChannel) {
             persistToDisk(alarms)

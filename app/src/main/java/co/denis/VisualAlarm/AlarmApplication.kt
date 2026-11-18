@@ -9,4 +9,9 @@ class AlarmApplication : Application() {
         get() = _alarmStore ?: synchronized(this) {
             _alarmStore ?: AlarmStore(this).also { _alarmStore = it }
         }
+
+    override fun onTerminate() {
+        super.onTerminate()
+        alarmStore.shutdown()
+    }
 }

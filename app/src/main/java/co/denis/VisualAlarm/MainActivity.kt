@@ -9,23 +9,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
-import co.denis.VisualAlarm.AlarmScheduler
-import co.denis.VisualAlarm.AlarmStore
-import co.denis.VisualAlarm.Hour
-import co.denis.VisualAlarm.Minute
-import co.denis.VisualAlarm.StoredAlarm
-import co.denis.VisualAlarm.ui.alarm.AlarmItem
-import co.denis.VisualAlarm.ui.alarm.AlarmSetScreen
-import kotlinx.coroutines.Dispatchers
+import co.denis.VisualAlarm.ui.alarm.AlarmListScreen
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.time.delay
-import kotlinx.coroutines.withContext
-import java.time.Duration
-import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
 
@@ -73,13 +60,13 @@ class MainActivity : ComponentActivity() {
         permissions = AlarmPermissions(this)
         setContent {
             MaterialTheme {
-                AlarmSetScreen(
+                AlarmListScreen(
                     alarmStore = alarmStore,
                     onToggleAlarm = { alarmId, enabled -> onToggleAlarm(alarmId, enabled) },
                     onAlarmUpdate = { alarmId, enabled, hour, minute -> onAlarmUpdate(alarmId, enabled, hour, minute) },
                     onAddAlarm = { hour, minute -> onAddAlarm(hour, minute) },
                     onDeleteAlarm = { alarmId -> onDeleteAlarm(alarmId) },
-                    isPermissionFlowRunning = isPermissionFlowRunning.value
+                    isPermissionFlowRunning = isPermissionFlowRunning
                 )
             }
         }
@@ -90,9 +77,11 @@ class MainActivity : ComponentActivity() {
         if (!launchFlowDone) {
             // First launch: walk the user through the permission wizard.
             launchFlowDone = true
+            isPermissionFlowRunning.value = true
             continuePermissionFlow()
         } else if (awaitingSettingsReturn) {
             awaitingSettingsReturn = false
+            isPermissionFlowRunning.value = true
             continuePermissionFlow()
         } else if (permissions.allRequiredPermissionsGranted()) {
             // App resumed with permissions already granted - ensure all enabled alarms are scheduled
@@ -206,22 +195,23 @@ class MainActivity : ComponentActivity() {
      * On failure, reverts the alarm to disabled state.
      */
     private fun schedulePendingAlarm() {
-        val alarm = pendingAlarmToEnable ?: return
-        pendingAlarmToEnable = null
+        try {
+            val alarm = pendingAlarmToEnable ?: return
+            pendingAlarmToEnable = null
 
-        val success = tryScheduleAlarm(alarm)
-        if (success) {
-            alarmStore.save(alarm)
-        } else {
-            // Revert to disabled state
-            alarmStore.save(alarm.copy(enabled = false))
-            Toast.makeText(
-                this,
-                "Failed to set alarm. Check permissions.",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-        lifecycleScope.launch {
+            val success = tryScheduleAlarm(alarm)
+            if (success) {
+                alarmStore.save(alarm)
+            } else {
+                // Revert to disabled state
+                alarmStore.save(alarm.copy(enabled = false))
+                Toast.makeText(
+                    this,
+                    "Failed to set alarm. Check permissions.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } finally {
             isPermissionFlowRunning.value = false
         }
     }
@@ -247,6 +237,8 @@ class MainActivity : ComponentActivity() {
         newHour: Int? = null,
         newMinute: Int? = null
     ) {
+        if (isPermissionFlowRunning.value) { return }
+
         val existingAlarm = alarmStore.getAlarmById(alarmId)
             ?: return // Alarm not found, nothing to update
 
@@ -286,6 +278,8 @@ class MainActivity : ComponentActivity() {
      * assigned requestCode, so it can be scheduled/cancelled correctly.
      */
     private fun onAddAlarm(hour: Int, minute: Int) {
+        if (isPermissionFlowRunning.value) { return }
+
         pendingAlarmToEnable = alarmStore.create(hour, minute)
         autoLaunchedSettings.clear()
         cameraPermissionRequested = false
@@ -297,6 +291,8 @@ class MainActivity : ComponentActivity() {
      * Cancels the system alarm (if scheduled) and removes it from the store.
      */
     private fun onDeleteAlarm(alarmId: String) {
+        if (isPermissionFlowRunning.value) { return }
+
         val alarm = alarmStore.getAlarmById(alarmId) ?: return
 
         // If this alarm is waiting on the permission flow, abandon it.
