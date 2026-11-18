@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,18 +30,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.denis.VisualAlarm.AlarmStore
-import co.denis.VisualAlarm.StoredAlarm
-import co.denis.VisualAlarm.ui.alarm.AlarmItem
 import java.util.Calendar
 
 @Composable
-fun AlarmSetScreen(
+fun AlarmListScreen(
     alarmStore: AlarmStore,
     onToggleAlarm: (String, Boolean) -> Unit,
     onAlarmUpdate: (String, Boolean?, Int?, Int?) -> Unit,
     onAddAlarm: (Int, Int) -> Unit,
     onDeleteAlarm: (String) -> Unit,
-    isPermissionFlowRunning: Boolean
+    isPermissionFlowRunning: MutableState<Boolean>
 ) {
     val context = LocalContext.current
     // Observe alarms from StateFlow - triggers recomposition on change.
@@ -98,7 +97,7 @@ fun AlarmSetScreen(
                         true
                     ).show()
                 },
-                enabled = !isPermissionFlowRunning,
+                enabled = !isPermissionFlowRunning.value,
                 // Keep the button above the system gesture/navigation bar
                 modifier = Modifier.navigationBarsPadding()
             ) {
@@ -107,7 +106,7 @@ fun AlarmSetScreen(
         }
 
         // Loading overlay during permission flow
-        if (isPermissionFlowRunning) {
+        if (isPermissionFlowRunning.value) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

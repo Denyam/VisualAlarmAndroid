@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,7 +40,7 @@ fun AlarmItem(
     onToggle: (String, Boolean) -> Unit,
     onTimeChange: (String, Int, Int) -> Unit,
     onDelete: (String) -> Unit,
-    isPermissionFlowRunning: Boolean
+    isPermissionFlowRunning: MutableState<Boolean>
 ) {
     val context = LocalContext.current
     var selectedHour by rememberSaveable { mutableIntStateOf(alarm.hour.value) }
@@ -68,7 +69,7 @@ fun AlarmItem(
             // Delete alarm button
             Button(
                 onClick = { onDelete(alarm.id) },
-                enabled = !isPermissionFlowRunning,
+                enabled = !isPermissionFlowRunning.value,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
@@ -97,7 +98,7 @@ fun AlarmItem(
                     true
                 ).show()
             },
-            enabled = !isPermissionFlowRunning
+            enabled = !isPermissionFlowRunning.value
         ) {
             Text(text = "Change Time", fontSize = 18.sp)
         }
@@ -105,10 +106,10 @@ fun AlarmItem(
         // Enable/Disable switch
         Switch(
             checked = alarm.enabled,
-            onCheckedChange = if (isPermissionFlowRunning) null else { enabled ->
+            onCheckedChange = if (isPermissionFlowRunning.value) null else { enabled ->
                 onToggle(alarm.id, enabled)
             },
-            enabled = !isPermissionFlowRunning
+            enabled = !isPermissionFlowRunning.value
         )
     }
 }
