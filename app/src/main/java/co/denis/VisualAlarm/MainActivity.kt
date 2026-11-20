@@ -63,9 +63,8 @@ class MainActivity : ComponentActivity() {
                 AlarmListScreen(
                     alarmStore = alarmStore,
                     onToggleAlarm = { alarmId, enabled -> onToggleAlarm(alarmId, enabled) },
-                    onAlarmUpdate = { alarmId, enabled, hour, minute, snoozeEnabled, snoozeDurationMinutes -> onAlarmUpdate(alarmId, enabled, hour, minute, snoozeEnabled, snoozeDurationMinutes) },
-                    onAddAlarm = { hour, minute -> onAddAlarm(hour, minute) },
                     onDeleteAlarm = { alarmId -> onDeleteAlarm(alarmId) },
+                    onSaveAlarm = { alarmId, hour, minute, snoozeEnabled, snoozeDurationMinutes -> onSaveAlarm(alarmId, hour, minute, snoozeEnabled, snoozeDurationMinutes) },
                     isPermissionFlowRunning = isPermissionFlowRunning
                 )
             }
@@ -277,18 +276,50 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Creates a new enabled alarm via the store and runs the permission
-     * flow to schedule it. The store's returned instance carries the
-     * assigned requestCode, so it can be scheduled/cancelled correctly.
+     * Saves an alarm (creates new or updates existing) and runs permission flow if enabling.
+     * alarmId is null for new alarms.
      */
-    private fun onAddAlarm(hour: Int, minute: Int) {
+    private fun onSaveAlarm(
+        alarmId: String?,
+        hour: Int,
+        minute: Int,
+        snoozeEnabled: Boolean,
+        snoozeDurationMinutes: Int
+    ) {
         if (isPermissionFlowRunning.value) { return }
 
-        pendingAlarmToEnable = alarmStore.create(hour, minute)
-        autoLaunchedSettings.clear()
-        cameraPermissionRequested = false
-        isPermissionFlowRunning.value = true
-        lifecycleScope.launch { continuePermissionFlow() }
+        val alarm = alarmId?.let { alarmStore.getAlarmById(it) }
+        val updatedAlarm = alarm?.copy(
+            hour = Hour.require(hour),
+            minute = Minute.require(minute),
+            snoozeEnabled = snoozeEnabled,
+            snoozeDurationMinutes = snoozeDurationMinutes
+        ) ?: alarmStore.create(hour, minute).copy(
+            snoozeEnabled = snoozeEnabled,
+            snoozeDurationMinutes = snoozeDurationMinutes
+        )
+
+        alarmStore.save(updatedAlarm)
+
+        // If alarm was enabled before, cancel old schedule
+        alarm?.let { existingAlarm ->
+            if (existingAlarm.enabled) {
+                AlarmScheduler(this).cancel(existingAlarm)
+            }
+        }
+
+        // If now enabled, run permission flow to schedule
+        if (updatedAlarm.enabled) {
+            pendingAlarmToEnable = updatedAlarm
+            autoLaunchedSettings.clear()
+            cameraPermissionRequested = false
+            isPermissionFlowRunning.value = true
+            lifecycleScope.launch { continuePermissionFlow() }
+        } else {
+            // Just disabled - no permissions needed
+            pendingAlarmToEnable = null
+            isPermissionFlowRunning.value = false
+        }
     }
 
     /**
