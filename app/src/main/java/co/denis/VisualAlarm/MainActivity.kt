@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 AlarmListScreen(
                     alarmStore = alarmStore,
                     onToggleAlarm = { alarmId, enabled -> onToggleAlarm(alarmId, enabled) },
-                    onAlarmUpdate = { alarmId, enabled, hour, minute -> onAlarmUpdate(alarmId, enabled, hour, minute) },
+                    onAlarmUpdate = { alarmId, enabled, hour, minute, snoozeEnabled, snoozeDurationMinutes -> onAlarmUpdate(alarmId, enabled, hour, minute, snoozeEnabled, snoozeDurationMinutes) },
                     onAddAlarm = { hour, minute -> onAddAlarm(hour, minute) },
                     onDeleteAlarm = { alarmId -> onDeleteAlarm(alarmId) },
                     isPermissionFlowRunning = isPermissionFlowRunning
@@ -228,14 +228,16 @@ class MainActivity : ComponentActivity() {
         AlarmScheduler(this).schedule(alarm)
 
     /**
-     * Unified method to update alarm state (enabled, hour, minute) by ID.
+     * Unified method to update alarm state (enabled, hour, minute, snooze) by ID.
      * Handles permission flow when enabling, cancels when disabling.
      */
     private fun onAlarmUpdate(
         alarmId: String,
         newEnabled: Boolean? = null,
         newHour: Int? = null,
-        newMinute: Int? = null
+        newMinute: Int? = null,
+        newSnoozeEnabled: Boolean? = null,
+        newSnoozeDurationMinutes: Int? = null
     ) {
         if (isPermissionFlowRunning.value) { return }
 
@@ -245,7 +247,9 @@ class MainActivity : ComponentActivity() {
         val updatedAlarm = existingAlarm.copy(
             enabled = if (newEnabled != null) newEnabled else existingAlarm.enabled,
             hour = if (newHour != null) Hour.require(newHour) else existingAlarm.hour,
-            minute = if (newMinute != null) Minute.require(newMinute) else existingAlarm.minute
+            minute = if (newMinute != null) Minute.require(newMinute) else existingAlarm.minute,
+            snoozeEnabled = if (newSnoozeEnabled != null) newSnoozeEnabled else existingAlarm.snoozeEnabled,
+            snoozeDurationMinutes = if (newSnoozeDurationMinutes != null) newSnoozeDurationMinutes else existingAlarm.snoozeDurationMinutes
         )
         alarmStore.save(updatedAlarm)
 

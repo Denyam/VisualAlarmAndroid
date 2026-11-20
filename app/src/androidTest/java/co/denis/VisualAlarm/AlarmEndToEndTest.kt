@@ -36,7 +36,7 @@ class AlarmEndToEndTest {
      */
     @Test
     fun alarmPendingIntent_launchesNonExportedAlarmActivity() {
-        val pendingIntent = NotificationHelper.getAlarmPendingIntent(context)
+        val pendingIntent = NotificationHelper.getAlarmPendingIntent(context, "test_alarm_id")
 
         // Send the PendingIntent ourselves: it executes with *our* identity,
         // which is what allows it to reach the non-exported activity.

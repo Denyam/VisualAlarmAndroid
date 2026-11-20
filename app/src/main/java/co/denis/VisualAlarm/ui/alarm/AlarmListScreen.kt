@@ -36,7 +36,7 @@ import java.util.Calendar
 fun AlarmListScreen(
     alarmStore: AlarmStore,
     onToggleAlarm: (String, Boolean) -> Unit,
-    onAlarmUpdate: (String, Boolean?, Int?, Int?) -> Unit,
+    onAlarmUpdate: (String, Boolean?, Int?, Int?, Boolean?, Int?) -> Unit,
     onAddAlarm: (Int, Int) -> Unit,
     onDeleteAlarm: (String) -> Unit,
     isPermissionFlowRunning: MutableState<Boolean>
@@ -76,9 +76,15 @@ fun AlarmListScreen(
                             alarm = alarm,
                             onToggle = onToggleAlarm,
                             onTimeChange = { alarmId, hour, minute ->
-                                onAlarmUpdate(alarmId, null, hour, minute)
+                                onAlarmUpdate(alarmId, null, hour, minute, null, null)
                             },
                             onDelete = onDeleteAlarm,
+                            onSnoozeEnabledChange = { alarmId, enabled ->
+                                onAlarmUpdate(alarmId, null, null, null, enabled, null)
+                            },
+                            onSnoozeDurationChange = { alarmId, minutes ->
+                                onAlarmUpdate(alarmId, null, null, null, null, minutes)
+                            },
                             isPermissionFlowRunning = isPermissionFlowRunning
                         )
                     }

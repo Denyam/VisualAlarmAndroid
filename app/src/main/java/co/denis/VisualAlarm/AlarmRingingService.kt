@@ -32,6 +32,7 @@ class AlarmRingingService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 1
         private const val START_ACTION = "co.denis.VisualAlarm.action.START_ALARM"
+        private const val SNOOZE_ACTION = "co.denis.VisualAlarm.action.SNOOZE"
         private const val SAFETY_TIMEOUT_MS = 5 * 60 * 1000L // 5 minutes
 
         /**
@@ -42,16 +43,32 @@ class AlarmRingingService : Service() {
         const val ACTION_ALARM_STOPPED = "co.denis.VisualAlarm.action.ALARM_STOPPED"
 
         /** Creates an Intent to start the alarm ringing service. */
-        fun createStartIntent(context: Context): Intent {
-            return Intent(context, AlarmRingingService::class.java).apply {
-                action = START_ACTION
-            }
+        fun createStartIntent(context: Context, alarmId: String = "") = createIntent(
+            context = context,
+            alarmId = alarmId,
+            action = START_ACTION
+        )
+
+        /** Creates an Intent to trigger snooze from AlarmActivity. */
+        fun createSnoozeIntent(context: Context, alarmId: String) = createIntent(
+            context = context,
+            alarmId = alarmId,
+            action = SNOOZE_ACTION
+        )
+
+        private fun createIntent(context: Context, alarmId: String, action: String) = Intent(
+            context,
+            AlarmRingingService::class.java
+        ).apply {
+            this.action = action
+            putExtra(NotificationHelper.EXTRA_ALARM_ID, alarmId)
         }
     }
 
     private var ringtone: Ringtone? = null
     private var torchFlasher: TorchFlasher? = null
     private var safetyTimeoutRunnable: Runnable? = null
+    private var currentAlarmId: String = ""
     private val handler = Handler(Looper.getMainLooper())
     private val permissions = AlarmPermissions(this)
 
@@ -61,6 +78,17 @@ class AlarmRingingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        currentAlarmId = intent?.getStringExtra(NotificationHelper.EXTRA_ALARM_ID) ?: ""
+        val action = intent?.action ?: START_ACTION
+
+        when (action) {
+            SNOOZE_ACTION -> {
+                handleSnoozeAction(currentAlarmId)
+                return START_NOT_STICKY
+            }
+            else -> { /* START_ACTION or legacy */ }
+        }
+
         // Check if notification will actually show (permission + channel enabled).
         // If not, launch AlarmActivity directly since fullScreenIntent won't fire.
         val canShowNotification = permissions.hasPostNotificationsPermission() && permissions.isAlarmChannelEnabled()
@@ -91,13 +119,43 @@ class AlarmRingingService : Service() {
             handler.removeCallbacks(it)
         }
 
-        // Safety timeout: auto-stop after 5 minutes
-        safetyTimeoutRunnable = Runnable { stopSelf() }
+        // Safety timeout: auto-stop after 5 minutes, with snooze logic
+        safetyTimeoutRunnable = Runnable { handleSafetyTimeout(currentAlarmId) }
         safetyTimeoutRunnable?.let {
             handler.postDelayed(it, SAFETY_TIMEOUT_MS)
         }
 
         return START_NOT_STICKY
+    }
+
+    private fun handleSnoozeAction(alarmId: String) {
+        if (alarmId.isBlank()) return
+        val store = (applicationContext as AlarmApplication).alarmStore
+        store.getAlarmById(alarmId)?.let { alarm ->
+            if (alarm.snoozeEnabled) {
+                val success = AlarmScheduler(this).scheduleSnooze(alarm)
+                if (success) {
+                    stopSelf()
+                }
+            } else {
+                stopSelf()
+            }
+        }
+    }
+
+    private fun handleSafetyTimeout(alarmId: String) {
+        if (alarmId.isBlank()) {
+            stopSelf()
+            return
+        }
+        val store = (applicationContext as AlarmApplication).alarmStore
+        store.getAlarmById(alarmId)?.let { alarm ->
+            if (alarm.snoozeEnabled) {
+                val success = AlarmScheduler(this).scheduleSnooze(alarm)
+            }
+
+            stopSelf()
+        }
     }
 
     /**
@@ -134,14 +192,18 @@ class AlarmRingingService : Service() {
         } else {
             stopForeground(true)
         }
-        notifyAlarmStopped()
+        notifyAlarmStopped(currentAlarmId)
         super.onDestroy()
     }
 
     /** Tells the ringing screen (if any) that the alarm is over. */
-    private fun notifyAlarmStopped() {
+    private fun notifyAlarmStopped(alarmId: String = "") {
         try {
-            sendBroadcast(Intent(ACTION_ALARM_STOPPED).setPackage(packageName))
+            val intent = Intent(ACTION_ALARM_STOPPED).setPackage(packageName)
+            if (alarmId.isNotBlank()) {
+                intent.putExtra(NotificationHelper.EXTRA_ALARM_ID, alarmId)
+            }
+            sendBroadcast(intent)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -150,7 +212,7 @@ class AlarmRingingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun buildNotification(): Notification {
-        val pendingIntent = NotificationHelper.getAlarmPendingIntent(this)
+        val pendingIntent = NotificationHelper.getAlarmPendingIntent(this, currentAlarmId)
 
         return NotificationCompat.Builder(this, AlarmPermissions.ALARM_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)

@@ -13,6 +13,12 @@
     <string name="cancel_alarm">Cancel Alarm</string>
     <string name="notification_permission_denied">Notifications are disabled, so alarms won\'t be shown. Tap SET ALARM to try again.</string>
 
+    <!-- Snooze strings -->
+    <string name="snooze">Snooze</string>
+    <string name="snooze_duration">Snooze duration</string>
+    <string name="minutes">min</string>
+    <string name="snooze_duration_description">Snooze duration in minutes (1-20)</string>
+
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus

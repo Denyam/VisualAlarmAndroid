@@ -42,7 +42,9 @@ data class StoredAlarm(
     val requestCode: Int,
     val hour: Hour,
     val minute: Minute,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val snoozeEnabled: Boolean = true,
+    val snoozeDurationMinutes: Int = DEFAULT_SNOOZE_MINUTES
 )
 
 sealed interface LoadAlarmsResult {
@@ -91,7 +93,9 @@ class AlarmStore(private val context: Context) {
             requestCode = 0, // Assigned by save()
             hour = Hour.require(hour),
             minute = Minute.require(minute),
-            enabled = true
+            enabled = true,
+            snoozeEnabled = true,
+            snoozeDurationMinutes = DEFAULT_SNOOZE_MINUTES
         )
     )
 
@@ -166,14 +170,16 @@ class AlarmStore(private val context: Context) {
                 val hour = Hour.create(obj.optInt("hour", -1))
                 val minute = Minute.create(obj.optInt("minute", -1))
                 val enabled = obj.optBoolean("enabled", true)
+                val snoozeEnabled = obj.optBoolean("snoozeEnabled", true)
+                val snoozeDurationMinutes = obj.optInt("snoozeDurationMinutes", DEFAULT_SNOOZE_MINUTES)
 
                 if (hour != null && minute != null) {
                     if (requestCode == 0) {
                         // Migration: old alarm without requestCode, assign new one
-                        alarms.add(StoredAlarm(id, nextRequestCode, hour, minute, enabled))
+                        alarms.add(StoredAlarm(id, nextRequestCode, hour, minute, enabled, snoozeEnabled, snoozeDurationMinutes))
                         nextRequestCode++
                     } else {
-                        alarms.add(StoredAlarm(id, requestCode, hour, minute, enabled))
+                        alarms.add(StoredAlarm(id, requestCode, hour, minute, enabled, snoozeEnabled, snoozeDurationMinutes))
                         maxRequestCode = max(maxRequestCode, requestCode)
                     }
                 } else {
@@ -199,6 +205,8 @@ class AlarmStore(private val context: Context) {
                 put("hour", alarm.hour.value)
                 put("minute", alarm.minute.value)
                 put("enabled", alarm.enabled)
+                put("snoozeEnabled", alarm.snoozeEnabled)
+                put("snoozeDurationMinutes", alarm.snoozeDurationMinutes)
             }
             array.put(obj)
         }
@@ -218,3 +226,4 @@ class AlarmStore(private val context: Context) {
 private const val PREFERENCES_FILE = "visual_alarm_store"
 private const val KEY_ALARMS_JSON = "alarms_json"
 private const val KEY_NEXT_REQUEST_CODE = "next_request_code"
+private const val DEFAULT_SNOOZE_MINUTES = 9

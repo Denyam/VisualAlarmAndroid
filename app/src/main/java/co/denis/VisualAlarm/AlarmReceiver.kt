@@ -23,8 +23,14 @@ class AlarmReceiver : BroadcastReceiver() {
             // The scheduled alarm firing.
             ACTION_ALARM_FIRED -> startAlarmServiceAndClear(context, broadcastIntent)
 
+            // Snooze alarm firing.
+            ACTION_SNOOZE_FIRED -> startSnoozeService(context, broadcastIntent)
+
+            // Alarm fully stopped (STOP button or timeout without snooze).
+            ACTION_ALARM_STOPPED -> handleAlarmStopped(context, broadcastIntent)
+
             // Legacy pending intents were created without an action; keep ringing for them.
-            null -> startAlarmService(context)
+            null -> startAlarmService(context, "")
         }
     }
 
@@ -48,8 +54,8 @@ class AlarmReceiver : BroadcastReceiver() {
      * won't re-arm automatically.
      */
     private fun startAlarmServiceAndClear(context: Context, broadcastIntent: Intent) {
-        startAlarmService(context)
-        val alarmId = broadcastIntent.getStringExtra(EXTRA_ALARM_ID)
+        val alarmId = broadcastIntent.getStringExtra(NotificationHelper.EXTRA_ALARM_ID)
+        startAlarmService(context, alarmId ?: "")
         if (alarmId != null) {
             val store = (context.applicationContext as AlarmApplication).alarmStore
             store.getAlarmById(alarmId)?.let { alarm ->
@@ -58,14 +64,34 @@ class AlarmReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun startAlarmService(context: Context) {
-        val intent = AlarmRingingService.createStartIntent(context)
+    /**
+     * Snooze alarm fired. Start the ring service with the same alarm ID.
+     * Do NOT disable the original alarm (it was already disabled when first fired).
+     */
+    private fun startSnoozeService(context: Context, broadcastIntent: Intent) {
+        val alarmId = broadcastIntent.getStringExtra(NotificationHelper.EXTRA_ALARM_ID)
+        if (alarmId != null) {
+            startAlarmService(context, alarmId)
+        }
+    }
+
+    /**
+     * Alarm fully stopped (STOP button or timeout without snooze).
+     * The alarm is already disabled, but handle any cleanup needed.
+     */
+    private fun handleAlarmStopped(context: Context, broadcastIntent: Intent) {
+        // Alarm is already disabled when it first fired.
+        // This handler is a placeholder for any future cleanup.
+    }
+
+    private fun startAlarmService(context: Context, alarmId: String) {
+        val intent = AlarmRingingService.createStartIntent(context, alarmId)
         ContextCompat.startForegroundService(context, intent)
     }
 
     companion object {
-        /** Action broadcast by [AlarmScheduler] when the alarm fires. */
         const val ACTION_ALARM_FIRED = "co.denis.VisualAlarm.action.ALARM_FIRED"
-        private const val EXTRA_ALARM_ID = "alarm_id"
+        const val ACTION_SNOOZE_FIRED = "co.denis.VisualAlarm.action.SNOOZE_FIRED"
+        const val ACTION_ALARM_STOPPED = "co.denis.VisualAlarm.action.ALARM_STOPPED"
     }
 }
