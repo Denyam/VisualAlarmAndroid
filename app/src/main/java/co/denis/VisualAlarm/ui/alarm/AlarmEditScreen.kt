@@ -16,9 +16,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -48,14 +45,13 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlarmEditScreen(
+fun AlarmEditSheetContent(
     alarm: StoredAlarm?,
     onSave: (Int, Int, Boolean, Int) -> Unit,
     onDismiss: () -> Unit,
     onDelete: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
     // Initial values from alarm or defaults
@@ -65,181 +61,161 @@ fun AlarmEditScreen(
     var snoozeDuration by rememberSaveable { mutableStateOf(alarm?.snoozeDurationMinutes?.toString() ?: "9") }
     var sliderPosition by remember { mutableStateOf(alarm?.snoozeDurationMinutes?.toFloat() ?: 9f) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
+        // Title
+        Text(
+            text = if (alarm == null) "Add Alarm" else "Edit Alarm",
+            style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Handle bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp, 4.dp)
-                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
-                )
-            }
+                .padding(horizontal = 24.dp)
+        )
 
-            // Title
-            Text(
-                text = if (alarm == null) "Add Alarm" else "Edit Alarm",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
+        // Time picker button
+        Button(
+            onClick = {
+                TimePickerDialog(
+                    context,
+                    { _, hour, minute ->
+                        selectedHour = hour
+                        selectedMinute = minute
+                    },
+                    selectedHour,
+                    selectedMinute,
+                    true
+                ).show()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
             )
-
-            // Time picker button
-            Button(
-                onClick = {
-                    TimePickerDialog(
-                        context,
-                        { _, hour, minute ->
-                            selectedHour = hour
-                            selectedMinute = minute
-                        },
-                        selectedHour,
-                        selectedMinute,
-                        true
-                    ).show()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                )
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Time", style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                }
-            }
-
-            // Snooze toggle
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Snooze", style = MaterialTheme.typography.bodyLarge)
-                Switch(
-                    checked = snoozeEnabled,
-                    onCheckedChange = { snoozeEnabled = it }
+                Text(text = "Time", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
+                    style = MaterialTheme.typography.headlineMedium
                 )
             }
+        }
 
-            // Snooze duration - slider with editable text field
-            if (snoozeEnabled) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+        // Snooze toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "Snooze", style = MaterialTheme.typography.bodyLarge)
+            Switch(
+                checked = snoozeEnabled,
+                onCheckedChange = { snoozeEnabled = it }
+            )
+        }
+
+        // Snooze duration - slider with editable text field
+        if (snoozeEnabled) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(text = "Snooze duration", style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Snooze duration", style = MaterialTheme.typography.bodyMedium)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Slider(
-                            modifier = Modifier.weight(1f),
-                            value = sliderPosition,
-                            valueRange = 1f..20f,
-                            onValueChange = { newValue ->
-                                sliderPosition = newValue
-                                val minutes = newValue.roundToInt()
-                                snoozeDuration = minutes.toString()
-                            }
-                        )
-                        TextField(
-                            value = snoozeDuration,
-                            onValueChange = { newValue ->
-                                val minutes = newValue.toIntOrNull() ?: sliderPosition.roundToInt()
-                                val clampedMinutes = max(1, min(minutes, 20))
+                    Slider(
+                        modifier = Modifier.weight(1f),
+                        value = sliderPosition,
+                        valueRange = 1f..20f,
+                        onValueChange = { newValue ->
+                            sliderPosition = newValue
+                            val minutes = newValue.roundToInt()
+                            snoozeDuration = minutes.toString()
+                        }
+                    )
+                    TextField(
+                        value = snoozeDuration,
+                        onValueChange = { newValue ->
+                            val minutes = newValue.toIntOrNull() ?: sliderPosition.roundToInt()
+                            val clampedMinutes = max(1, min(minutes, 20))
 
-                                snoozeDuration = clampedMinutes.toString()
-                                sliderPosition = clampedMinutes.toFloat()
-                            },
-                            modifier = Modifier.width(60.dp),
-                            singleLine = true
-                        )
-                        Text(text = " min", style = MaterialTheme.typography.bodyMedium)
-                    }
+                            snoozeDuration = clampedMinutes.toString()
+                            sliderPosition = clampedMinutes.toFloat()
+                        },
+                        modifier = Modifier.width(60.dp),
+                        singleLine = true
+                    )
+                    Text(text = " min", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        // Action buttons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Delete button (only for editing existing alarm)
+            onDelete?.let { deleteAction ->
+                Button(
+                    onClick = {
+                        deleteAction()
+                        onDismiss()
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                ) {
+                    Text(text = "Delete", fontSize = 16.sp)
                 }
             }
 
-            // Action buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Cancel button
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
-                // Delete button (only for editing existing alarm)
-                onDelete?.let { deleteAction ->
-                    Button(
-                        onClick = {
-                            deleteAction()
-                            onDismiss()
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    ) {
-                        Text(text = "Delete", fontSize = 16.sp)
-                    }
-                }
+                Text(text = "Cancel", fontSize = 16.sp)
+            }
 
-                // Cancel button
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            // Save button
+            Button(
+                onClick = {
+                    onSave(
+                        selectedHour,
+                        selectedMinute,
+                        snoozeEnabled,
+                        snoozeDuration.toIntOrNull() ?: sliderPosition.roundToInt()
                     )
-                ) {
-                    Text(text = "Cancel", fontSize = 16.sp)
-                }
-
-                // Save button
-                Button(
-                    onClick = {
-                        onSave(
-                            selectedHour,
-                            selectedMinute,
-                            snoozeEnabled,
-                            snoozeDuration.toIntOrNull() ?: sliderPosition.roundToInt()
-                        )
-                        onDismiss()
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(text = if (alarm == null) "Add" else "Save", fontSize = 16.sp)
-                }
+                    onDismiss()
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(text = if (alarm == null) "Add" else "Save", fontSize = 16.sp)
             }
         }
     }
