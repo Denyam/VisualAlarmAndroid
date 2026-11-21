@@ -198,8 +198,14 @@ fun RingingScreen(
             Button(
                 onClick = onSnooze,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (background == Color.White) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = if (background == Color.White) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = if (background == Color.White)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = if (background == Color.White)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
                 Text(text = "SNOOZE", fontSize = 24.sp)

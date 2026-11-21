@@ -153,9 +153,9 @@ class AlarmRingingService : Service() {
             if (alarm.snoozeEnabled) {
                 val success = AlarmScheduler(this).scheduleSnooze(alarm)
             }
-
-            stopSelf()
         }
+
+        stopSelf()
     }
 
     /**
