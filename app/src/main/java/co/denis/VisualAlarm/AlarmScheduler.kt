@@ -104,7 +104,42 @@ class AlarmScheduler(private val context: Context) {
         )
     }
 
+    /**
+     * Schedule a snooze alarm - fires once after the snooze duration.
+     * Uses setAlarmClock() like regular alarms to show status bar icon.
+     */
+    fun scheduleSnooze(alarm: StoredAlarm): Boolean {
+        val triggerTime = System.currentTimeMillis() + alarm.snoozeDurationMinutes.toLong() * 60 * 1000
+
+        val pendingIntent = buildSnoozePendingIntent(alarm)
+        val showIntent = buildShowIntent(alarm)
+
+        return try {
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(
+                triggerTime,
+                showIntent
+            )
+            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+            true
+        } catch (e: SecurityException) {
+            false
+        }
+    }
+
+    private fun buildSnoozePendingIntent(alarm: StoredAlarm): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).apply {
+            action = AlarmReceiver.ACTION_SNOOZE_FIRED
+            putExtra(EXTRA_ALARM_ID, alarm.id)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            alarm.requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     companion object {
-        private const val EXTRA_ALARM_ID = "alarm_id"
+        private const val EXTRA_ALARM_ID = NotificationHelper.EXTRA_ALARM_ID
     }
 }

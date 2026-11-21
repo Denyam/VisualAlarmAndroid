@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.navigation.compose)
     
     debugImplementation(libs.androidx.compose.ui.tooling)
     

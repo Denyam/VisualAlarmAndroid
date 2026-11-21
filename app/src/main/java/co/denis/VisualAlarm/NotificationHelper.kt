@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
     private const val CHANNEL_NAME = "Alarm Notifications"
+    const val EXTRA_ALARM_ID = "alarm_id"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -27,9 +28,10 @@ object NotificationHelper {
         }
     }
 
-    fun getAlarmPendingIntent(context: Context): PendingIntent {
+    fun getAlarmPendingIntent(context: Context, alarmId: String = ""): PendingIntent {
         val intent = Intent(context, AlarmActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra(EXTRA_ALARM_ID, alarmId)
         }
         return PendingIntent.getActivity(
             context,

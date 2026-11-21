@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 
@@ -51,6 +55,9 @@ class AlarmActivity : ComponentActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 
+        // Get alarm ID from intent
+        val alarmId = intent.getStringExtra(NotificationHelper.EXTRA_ALARM_ID) ?: ""
+
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
 			setShowWhenLocked(true)
 		} else {
@@ -70,12 +77,17 @@ class AlarmActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 RingingScreen(
+                    alarmId = alarmId,
                     onBrightFrame = { bright ->
                         setScreenBrightness(if (bright) 1f else DIM_SCREEN_BRIGHTNESS)
                     },
                     onStop = {
                         stopAlarmService()
                         finish()
+                    },
+                    onSnooze = {
+                        val intent = AlarmRingingService.createSnoozeIntent(this@AlarmActivity, alarmId)
+                        startService(intent)
                     }
                 )
             }
@@ -130,12 +142,19 @@ class AlarmActivity : ComponentActivity() {
  * brightness in sync (max on white frames, near-off on black frames) for a
  * stronger strobe effect.
  *
+ * @param alarmId ID of the alarm that is ringing
  * @param onBrightFrame true on the white/full-brightness frame, false on the
  * black/dim frame.
  * @param onStop invoked when the user taps STOP.
+ * @param onSnooze invoked when the user taps SNOOZE.
  */
 @Composable
-fun RingingScreen(onBrightFrame: (Boolean) -> Unit, onStop: () -> Unit) {
+fun RingingScreen(
+    alarmId: String,
+    onBrightFrame: (Boolean) -> Unit,
+    onStop: () -> Unit,
+    onSnooze: () -> Unit
+) {
     // Hard cut, no crossfade: a strobe must flip instantly between frames.
     var brightFrame by remember { mutableStateOf(true) }
 
@@ -162,14 +181,29 @@ fun RingingScreen(onBrightFrame: (Boolean) -> Unit, onStop: () -> Unit) {
             style = MaterialTheme.typography.headlineLarge,
             color = contentColor
         )
-        Button(
-            onClick = onStop,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = contentColor,
-                contentColor = background
-            )
+        Column(
+            modifier = Modifier.padding(top = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "STOP")
+            Button(
+                onClick = onStop,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = contentColor,
+                    contentColor = background
+                )
+            ) {
+                Text(text = "STOP", fontSize = 24.sp)
+            }
+            Button(
+                onClick = onSnooze,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (background == Color.White) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = if (background == Color.White) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            ) {
+                Text(text = "SNOOZE", fontSize = 24.sp)
+            }
         }
     }
 }
