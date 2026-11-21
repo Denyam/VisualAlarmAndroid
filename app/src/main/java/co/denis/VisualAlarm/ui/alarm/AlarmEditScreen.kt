@@ -81,11 +81,13 @@ fun AlarmEditSheetContent(
     }
 
     var snoozeEnabled by rememberSaveable { mutableStateOf(alarm?.snoozeEnabled ?: true) }
-    var snoozeDuration by rememberSaveable {
+    var sliderPosition by remember {
         mutableStateOf(
-            (alarm?.snoozeDurationMinutes ?: StoredAlarm.DEFAULT_SNOOZE_MINUTES).toString()
+            (alarm?.snoozeDurationMinutes ?: StoredAlarm.DEFAULT_SNOOZE_MINUTES) .toFloat()
         )
     }
+
+    fun snoozeDuration() = sliderPosition.roundToInt()
 
     fun clampedSnoozeDuration(enteredDuration: String) = max(
         1,
@@ -94,8 +96,7 @@ fun AlarmEditSheetContent(
             20)
     )
 
-    fun sliderPosition() = clampedSnoozeDuration(snoozeDuration)
-        .toFloat()
+    fun snoozeString() = snoozeDuration().toString()
 
     // TimePicker state for the dialog
     val timePickerState = rememberTimePickerState(
@@ -187,21 +188,16 @@ fun AlarmEditSheetContent(
                     ) {
                         Slider(
                             modifier = Modifier.weight(1f),
-                            value = sliderPosition(),
+                            value = sliderPosition,
                             valueRange = 1f..20f,
                             onValueChange = { newValue ->
-                                val minutes = newValue.roundToInt()
-                                snoozeDuration = minutes.toString()
+                                sliderPosition = newValue
                             }
                         )
                         androidx.compose.material3.TextField(
-                            value = snoozeDuration,
+                            value = snoozeString(),
                             onValueChange = { newValue ->
-//                                val minutes = newValue.toIntOrNull() ?: sliderPosition.roundToInt()
-//                                val clampedMinutes = max(1, min(minutes, 20))
-
-                                snoozeDuration = clampedSnoozeDuration(newValue).toString()
-//                                sliderPosition = clampedMinutes.toFloat()
+                                sliderPosition = clampedSnoozeDuration(newValue).toFloat()
                             },
                             modifier = Modifier.width(60.dp),
                             singleLine = true
@@ -262,7 +258,7 @@ fun AlarmEditSheetContent(
                             selectedHour,
                             selectedMinute,
                             snoozeEnabled,
-                            snoozeDuration.toIntOrNull() ?: sliderPosition().roundToInt()
+                            snoozeDuration()
                         )
                         onDismiss()
                     },
