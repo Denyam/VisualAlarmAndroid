@@ -20,6 +20,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -34,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,11 +49,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import co.denis.VisualAlarm.StoredAlarm
+import co.denis.VisualAlarm.Hour
+import co.denis.VisualAlarm.Minute
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import androidx.compose.ui.tooling.preview.Preview
+import android.content.res.Configuration
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -65,11 +72,30 @@ fun AlarmEditSheetContent(
 
     // Initial values from alarm or defaults
     val currentTime = Calendar.getInstance()
-    var selectedHour by rememberSaveable { mutableStateOf(alarm?.hour?.value ?: currentTime.get(Calendar.HOUR_OF_DAY)) }
-    var selectedMinute by rememberSaveable { mutableStateOf(alarm?.minute?.value ?: currentTime.get(Calendar.MINUTE)) }
+    var selectedHour by rememberSaveable {
+        mutableStateOf(alarm?.hour?.value ?: currentTime.get(Calendar.HOUR_OF_DAY))
+    }
+
+    var selectedMinute by rememberSaveable {
+        mutableStateOf(alarm?.minute?.value ?: currentTime.get(Calendar.MINUTE))
+    }
+
     var snoozeEnabled by rememberSaveable { mutableStateOf(alarm?.snoozeEnabled ?: true) }
-    var snoozeDuration by rememberSaveable { mutableStateOf(alarm?.snoozeDurationMinutes?.toString() ?: "9") }
-    var sliderPosition by remember { mutableStateOf(alarm?.snoozeDurationMinutes?.toFloat() ?: 9f) }
+    var snoozeDuration by rememberSaveable {
+        mutableStateOf(
+            (alarm?.snoozeDurationMinutes ?: StoredAlarm.DEFAULT_SNOOZE_MINUTES).toString()
+        )
+    }
+
+    fun clampedSnoozeDuration(enteredDuration: String) = max(
+        1,
+        min(
+            enteredDuration.toIntOrNull() ?: StoredAlarm.DEFAULT_SNOOZE_MINUTES,
+            20)
+    )
+
+    fun sliderPosition() = clampedSnoozeDuration(snoozeDuration)
+        .toFloat()
 
     // TimePicker state for the dialog
     val timePickerState = rememberTimePickerState(
@@ -161,10 +187,9 @@ fun AlarmEditSheetContent(
                     ) {
                         Slider(
                             modifier = Modifier.weight(1f),
-                            value = sliderPosition,
+                            value = sliderPosition(),
                             valueRange = 1f..20f,
                             onValueChange = { newValue ->
-                                sliderPosition = newValue
                                 val minutes = newValue.roundToInt()
                                 snoozeDuration = minutes.toString()
                             }
@@ -172,11 +197,11 @@ fun AlarmEditSheetContent(
                         androidx.compose.material3.TextField(
                             value = snoozeDuration,
                             onValueChange = { newValue ->
-                                val minutes = newValue.toIntOrNull() ?: sliderPosition.roundToInt()
-                                val clampedMinutes = max(1, min(minutes, 20))
+//                                val minutes = newValue.toIntOrNull() ?: sliderPosition.roundToInt()
+//                                val clampedMinutes = max(1, min(minutes, 20))
 
-                                snoozeDuration = clampedMinutes.toString()
-                                sliderPosition = clampedMinutes.toFloat()
+                                snoozeDuration = clampedSnoozeDuration(newValue).toString()
+//                                sliderPosition = clampedMinutes.toFloat()
                             },
                             modifier = Modifier.width(60.dp),
                             singleLine = true
@@ -237,7 +262,7 @@ fun AlarmEditSheetContent(
                             selectedHour,
                             selectedMinute,
                             snoozeEnabled,
-                            snoozeDuration.toIntOrNull() ?: sliderPosition.roundToInt()
+                            snoozeDuration.toIntOrNull() ?: sliderPosition().roundToInt()
                         )
                         onDismiss()
                     },
@@ -276,5 +301,157 @@ fun AlarmEditSheetContent(
             },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         )
+    }
+}
+
+@Preview(
+    name = "Add Alarm Sheet",
+    showBackground = true,
+    showSystemUi = true,
+    widthDp = 360,
+    heightDp = 500
+)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AlarmEditSheetAddPreview() {
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var isVisible by remember { mutableStateOf(true) }
+
+    if (isVisible) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } }
+        ) {
+            AlarmEditSheetContent(
+                alarm = null,
+                onSave = { _, _, _, _ -> },
+                onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } },
+                onDelete = null
+            )
+        }
+    }
+    // Auto-show the sheet
+    DisposableEffect(Unit) {
+        scope.launch { sheetState.show() }
+        onDispose {}
+    }
+}
+
+@Preview(
+    name = "Edit Alarm Sheet",
+    showBackground = true,
+    showSystemUi = true,
+    widthDp = 360,
+    heightDp = 500
+)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AlarmEditSheetEditPreview() {
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var isVisible by remember { mutableStateOf(true) }
+    val mockAlarm = StoredAlarm(
+        id = "alarm-1",
+        requestCode = 123,
+        hour = Hour.require(7),
+        minute = Minute.require(30),
+        enabled = true,
+        snoozeEnabled = true,
+        snoozeDurationMinutes = 10
+    )
+
+    if (isVisible) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } }
+        ) {
+            AlarmEditSheetContent(
+                alarm = mockAlarm,
+                onSave = { _, _, _, _ -> },
+                onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } },
+                onDelete = { }
+            )
+        }
+    }
+    DisposableEffect(Unit) {
+        scope.launch { sheetState.show() }
+        onDispose {}
+    }
+}
+
+@Preview(
+    name = "Edit Alarm - Snooze Disabled",
+    showBackground = true,
+    showSystemUi = true,
+    widthDp = 360,
+    heightDp = 500
+)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AlarmEditSheetSnoozeDisabledPreview() {
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var isVisible by remember { mutableStateOf(true) }
+    val mockAlarm = StoredAlarm(
+        id = "alarm-2",
+        requestCode = 456,
+        hour = Hour.require(22),
+        minute = Minute.require(0),
+        enabled = true,
+        snoozeEnabled = false,
+        snoozeDurationMinutes = 9
+    )
+
+    if (isVisible) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } }
+        ) {
+            AlarmEditSheetContent(
+                alarm = mockAlarm,
+                onSave = { _, _, _, _ -> },
+                onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } },
+                onDelete = { }
+            )
+        }
+    }
+    DisposableEffect(Unit) {
+        scope.launch { sheetState.show() }
+        onDispose {}
+    }
+}
+
+@Preview(
+    name = "Add Alarm - Dark Theme",
+    showBackground = true,
+    showSystemUi = true,
+    widthDp = 360,
+    heightDp = 500,
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AlarmEditSheetAddDarkPreview() {
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var isVisible by remember { mutableStateOf(true) }
+
+    if (isVisible) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } }
+        ) {
+            AlarmEditSheetContent(
+                alarm = null,
+                onSave = { _, _, _, _ -> },
+                onDismiss = { scope.launch { sheetState.hide() }.invokeOnCompletion { if (!sheetState.isVisible) isVisible = false } },
+                onDelete = null
+            )
+        }
+    }
+    DisposableEffect(Unit) {
+        scope.launch { sheetState.show() }
+        onDispose {}
     }
 }

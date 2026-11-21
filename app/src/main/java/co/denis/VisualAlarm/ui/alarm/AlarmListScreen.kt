@@ -168,10 +168,10 @@ fun AlarmListContent(
                 style = MaterialTheme.typography.headlineLarge
             )
 
-            Text(
-                text = "For Sophie",
-                style = MaterialTheme.typography.headlineMedium
-            )
+//            Text(
+//                text = "For Sophie",
+//                style = MaterialTheme.typography.headlineMedium
+//            )
 
             if (alarms.isEmpty()) {
                 Text(

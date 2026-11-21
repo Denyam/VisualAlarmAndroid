@@ -45,7 +45,11 @@ data class StoredAlarm(
     val enabled: Boolean = true,
     val snoozeEnabled: Boolean = true,
     val snoozeDurationMinutes: Int = DEFAULT_SNOOZE_MINUTES
-)
+) {
+    companion object {
+        const val DEFAULT_SNOOZE_MINUTES = 9
+    }
+}
 
 sealed interface LoadAlarmsResult {
     data class Success(val alarms: List<StoredAlarm>) : LoadAlarmsResult
@@ -95,7 +99,6 @@ class AlarmStore(private val context: Context) {
             minute = Minute.require(minute),
             enabled = true,
             snoozeEnabled = true,
-            snoozeDurationMinutes = DEFAULT_SNOOZE_MINUTES
         )
     )
 
@@ -171,7 +174,9 @@ class AlarmStore(private val context: Context) {
                 val minute = Minute.create(obj.optInt("minute", -1))
                 val enabled = obj.optBoolean("enabled", true)
                 val snoozeEnabled = obj.optBoolean("snoozeEnabled", true)
-                val snoozeDurationMinutes = obj.optInt("snoozeDurationMinutes", DEFAULT_SNOOZE_MINUTES)
+                val snoozeDurationMinutes = obj.optInt(
+                    "snoozeDurationMinutes", StoredAlarm.DEFAULT_SNOOZE_MINUTES
+                )
 
                 if (hour != null && minute != null) {
                     if (requestCode == 0) {
@@ -226,4 +231,3 @@ class AlarmStore(private val context: Context) {
 private const val PREFERENCES_FILE = "visual_alarm_store"
 private const val KEY_ALARMS_JSON = "alarms_json"
 private const val KEY_NEXT_REQUEST_CODE = "next_request_code"
-private const val DEFAULT_SNOOZE_MINUTES = 9
