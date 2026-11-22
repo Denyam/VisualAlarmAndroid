@@ -1,19 +1,11 @@
 <resources>
     <string name="app_name">VisualAlarmAndroid</string>
     <string name="action_settings">Налаштування</string>
-    <!-- Strings used for fragments for navigation -->
 
     <!-- Alarm permission flow -->
     <string name="permission_still_needed">Необхідний дозвіл все ще відсутній. Натисніть ВСТАНОВИТИ БУДИЛЬНИК, щоб спробувати знову.</string>
 
-    <string name="cancel_alarm">Скасувати будильник</string>
     <string name="notification_permission_denied">Сповіщення вимкнено, тому будильники не будуть показуватися. Натисніть ВСТАНОВИТИ БУДИЛЬНИК, щоб спробувати знову.</string>
-
-    <!-- Snooze strings -->
-    <string name="snooze">Відкласти</string>
-    <string name="snooze_duration">Тривалість відкладання</string>
-    <string name="minutes">хв</string>
-    <string name="snooze_duration_description">Тривалість відкладання в хвилинах (1–20)</string>
 
     <!-- Alarm Ringing Screen -->
     <string name="alarm_ringing_title">БУДИЛЬНИК ДЗВОНИТЬ!</string>

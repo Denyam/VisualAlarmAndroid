@@ -1,19 +1,11 @@
 <resources>
     <string name="app_name">VisualAlarmAndroid</string>
     <string name="action_settings">Einstellungen</string>
-    <!-- Strings used for fragments for navigation -->
 
     <!-- Alarm permission flow -->
     <string name="permission_still_needed">Eine erforderliche Berechtigung fehlt noch. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
 
-    <string name="cancel_alarm">Wecker abbrechen</string>
-    <string name="notification_permission_denied">Benachrichtigungen sind deaktiviert, daher werden Wecker nicht angezeigt. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
-
-    <!-- Snooze strings -->
-    <string name="snooze">Schlummern</string>
-    <string name="snooze_duration">Schlummerdauer</string>
-    <string name="minutes">Min</string>
-    <string name="snooze_duration_description">Schlummerdauer in Minuten (1–20)</string>
+`    <string name="notification_permission_denied">Benachrichtigungen sind deaktiviert, daher werden Wecker nicht angezeigt. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
 
     <!-- Alarm Ringing Screen -->
     <string name="alarm_ringing_title">WECKER LÄUTET!</string>
