@@ -34,10 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.denis.VisualAlarm.AlarmStore
 import co.denis.VisualAlarm.StoredAlarm
+import co.denis.VisualAlarm.R
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
@@ -135,7 +137,7 @@ fun AlarmListScreen(
                 CircularProgressIndicator(color = Color.White)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Setting up alarm...",
+                    stringResource(R.string.toast_setting_up_alarm),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -164,7 +166,7 @@ fun AlarmListContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Alarms",
+                text = stringResource(R.string.alarms_screen_title),
                 style = MaterialTheme.typography.headlineLarge
             )
 
@@ -175,7 +177,7 @@ fun AlarmListContent(
 
             if (alarms.isEmpty()) {
                 Text(
-                    text = "No alarms set",
+                    text = stringResource(R.string.empty_alarms_text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -205,7 +207,7 @@ fun AlarmListContent(
                 // Keep the button above the system gesture/navigation bar
                 modifier = Modifier.navigationBarsPadding()
             ) {
-                Text(text = "Add Alarm", fontSize = 18.sp)
+                Text(text = stringResource(R.string.add_alarm_button), fontSize = 18.sp)
             }
         }
     }

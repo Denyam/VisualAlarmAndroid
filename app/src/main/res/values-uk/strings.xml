@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">VisualAlarmAndroid</string>
+    <string name="action_settings">Налаштування</string>
+
+    <!-- Alarm permission flow -->
+    <string name="permission_still_needed">Необхідний дозвіл все ще відсутній. Натисніть ВСТАНОВИТИ БУДИЛЬНИК, щоб спробувати знову.</string>
+
+    <string name="notification_permission_denied">Сповіщення вимкнено, тому будильники не будуть показуватися. Натисніть ВСТАНОВИТИ БУДИЛЬНИК, щоб спробувати знову.</string>
+
+    <!-- Alarm Ringing Screen -->
+    <string name="alarm_ringing_title">БУДИЛЬНИК ДЗВОНИТЬ!</string>
+    <string name="alarm_stop_button">ЗУПИНИТИ</string>
+    <string name="alarm_snooze_button">ВІДКЛАСТИ</string>
+
+    <!-- Notifications & Toasts -->
+    <string name="notification_title_alarm">Будильник</string>
+    <string name="notification_text_alarm_ringing">Ваш будильник дзвонить!</string>
+    <string name="toast_notifications_blocked">Сповіщення будильника заблоковано. Увімкніть \"Сповіщення будильника\" у Налаштуваннях для надійної роботи.</string>
+    <string name="toast_failed_to_set_alarm">Не вдалося встановити будильник. Перевірте дозволи.</string>
+    <string name="toast_setting_up_alarm">Налаштування будильника…</string>
+
+    <!-- Alarm List Screen -->
+    <string name="alarms_screen_title">Будильники</string>
+    <string name="empty_alarms_text">Будильники не встановлені</string>
+    <string name="add_alarm_button">Додати будильник</string>
+
+    <!-- Alarm Edit Sheet -->
+    <string name="add_alarm_sheet_title">Додати будильник</string>
+    <string name="edit_alarm_sheet_title">Редагувати будильник</string>
+    <string name="time_label">Час</string>
+    <string name="snooze_label">Відкласти</string>
+    <string name="snooze_duration_label">Тривалість відкладання</string>
+    <string name="snooze_duration_minutes_suffix"> хв</string>
+    <string name="delete_button">Видалити</string>
+    <string name="cancel_button">Скасувати</string>
+    <string name="save_button">Зберегти</string>
+    <string name="add_button">Додати</string>
+    <string name="select_time_dialog_title">Вибрати час</string>
+    <string name="ok_button">ОК</string>
+
+    <!-- Alarm Item -->
+    <string name="delete_alarm_content_description">Видалити будильник</string>
+
+    <!-- Notification Channel -->
+    <string name="alarm_notification_channel_name">Сповіщення будильника</string>
+    <string name="alarm_notification_channel_description">Канал для сповіщень будильника</string>
+</resources>

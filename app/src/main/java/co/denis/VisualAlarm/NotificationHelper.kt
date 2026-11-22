@@ -9,13 +9,12 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 
 object NotificationHelper {
-    private const val CHANNEL_NAME = "Alarm Notifications"
     const val EXTRA_ALARM_ID = "alarm_id"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = CHANNEL_NAME
-            val descriptionText = "Channel for Alarm notifications"
+            val name = context.getString(R.string.alarm_notification_channel_name)
+            val descriptionText = context.getString(R.string.alarm_notification_channel_description)
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(AlarmPermissions.ALARM_CHANNEL_ID, name, importance).apply {
                 description = descriptionText

@@ -96,7 +96,7 @@ class AlarmRingingService : Service() {
             launchAlarmActivityDirectly()
             Toast.makeText(
                 this,
-                "Alarm notifications blocked. Enable 'Alarm Notifications' in Settings for reliable alarms.",
+                getString(R.string.toast_notifications_blocked),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -216,8 +216,8 @@ class AlarmRingingService : Service() {
 
         return NotificationCompat.Builder(this, AlarmPermissions.ALARM_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("Alarm")
-            .setContentText("Your alarm is ringing!")
+            .setContentTitle(getString(R.string.notification_title_alarm))
+            .setContentText(getString(R.string.notification_text_alarm_ringing))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setFullScreenIntent(pendingIntent, true)

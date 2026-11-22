@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">VisualAlarmAndroid</string>
+    <string name="action_settings">Настройки</string>
+
+    <!-- Alarm permission flow -->
+    <string name="permission_still_needed">Необходимое разрешение все еще отсутствует. Нажмите УСТАНОВИТЬ БУДИЛЬНИК, чтобы повторить попытку.</string>
+
+    <string name="notification_permission_denied">Уведомления отключены, поэтому будильники не будут показываться. Нажмите УСТАНОВИТЬ БУДИЛЬНИК, чтобы повторить попытку.</string>
+
+    <!-- Alarm Ringing Screen -->
+    <string name="alarm_ringing_title">БУДИЛЬНИК ЗВОНИТ!</string>
+    <string name="alarm_stop_button">ОСТАНОВИТЬ</string>
+    <string name="alarm_snooze_button">ОТЛОЖИТЬ</string>
+
+    <!-- Notifications & Toasts -->
+    <string name="notification_title_alarm">Будильник</string>
+    <string name="notification_text_alarm_ringing">Ваш будильник звонит!</string>
+    <string name="toast_notifications_blocked">Уведомления будильника заблокированы. Включите \"Уведомления будильника\" в Настройках для надежной работы.</string>
+    <string name="toast_failed_to_set_alarm">Не удалось установить будильник. Проверьте разрешения.</string>
+    <string name="toast_setting_up_alarm">Настройка будильника…</string>
+
+    <!-- Alarm List Screen -->
+    <string name="alarms_screen_title">Будильники</string>
+    <string name="empty_alarms_text">Будильники не установлены</string>
+    <string name="add_alarm_button">Добавить будильник</string>
+
+    <!-- Alarm Edit Sheet -->
+    <string name="add_alarm_sheet_title">Добавить будильник</string>
+    <string name="edit_alarm_sheet_title">Редактировать будильник</string>
+    <string name="time_label">Время</string>
+    <string name="snooze_label">Отложить</string>
+    <string name="snooze_duration_label">Длительность откладывания</string>
+    <string name="snooze_duration_minutes_suffix"> мин</string>
+    <string name="delete_button">Удалить</string>
+    <string name="cancel_button">Отмена</string>
+    <string name="save_button">Сохранить</string>
+    <string name="add_button">Добавить</string>
+    <string name="select_time_dialog_title">Выбрать время</string>
+    <string name="ok_button">ОК</string>
+
+    <!-- Alarm Item -->
+    <string name="delete_alarm_content_description">Удалить будильник</string>
+
+    <!-- Notification Channel -->
+    <string name="alarm_notification_channel_name">Уведомления будильника</string>
+    <string name="alarm_notification_channel_description">Канал для уведомлений будильника</string>
+</resources>

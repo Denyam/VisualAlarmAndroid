@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">VisualAlarmAndroid</string>
+    <string name="action_settings">Einstellungen</string>
+
+    <!-- Alarm permission flow -->
+    <string name="permission_still_needed">Eine erforderliche Berechtigung fehlt noch. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
+
+    <string name="notification_permission_denied">Benachrichtigungen sind deaktiviert, daher werden Wecker nicht angezeigt. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
+
+    <!-- Alarm Ringing Screen -->
+    <string name="alarm_ringing_title">WECKER LÄUTET!</string>
+    <string name="alarm_stop_button">STOPP</string>
+    <string name="alarm_snooze_button">SCHLUMMERN</string>
+
+    <!-- Notifications & Toasts -->
+    <string name="notification_title_alarm">Wecker</string>
+    <string name="notification_text_alarm_ringing">Ihr Wecker läutet!</string>
+    <string name="toast_notifications_blocked">Wecker-Benachrichtigungen blockiert. Aktivieren Sie "Wecker-Benachrichtigungen" in den Einstellungen für zuverlässige Wecker.</string>
+    <string name="toast_failed_to_set_alarm">Wecker konnte nicht eingestellt werden. Berechtigungen prüfen.</string>
+    <string name="toast_setting_up_alarm">Wecker wird eingerichtet…</string>
+
+    <!-- Alarm List Screen -->
+    <string name="alarms_screen_title">Wecker</string>
+    <string name="empty_alarms_text">Keine Wecker eingestellt</string>
+    <string name="add_alarm_button">Wecker hinzufügen</string>
+
+    <!-- Alarm Edit Sheet -->
+    <string name="add_alarm_sheet_title">Wecker hinzufügen</string>
+    <string name="edit_alarm_sheet_title">Wecker bearbeiten</string>
+    <string name="time_label">Zeit</string>
+    <string name="snooze_label">Schlummern</string>
+    <string name="snooze_duration_label">Schlummerdauer</string>
+    <string name="snooze_duration_minutes_suffix"> Min</string>
+    <string name="delete_button">Löschen</string>
+    <string name="cancel_button">Abbrechen</string>
+    <string name="save_button">Speichern</string>
+    <string name="add_button">Hinzufügen</string>
+    <string name="select_time_dialog_title">Zeit auswählen</string>
+    <string name="ok_button">OK</string>
+
+    <!-- Alarm Item -->
+    <string name="delete_alarm_content_description">Wecker löschen</string>
+
+    <!-- Notification Channel -->
+    <string name="alarm_notification_channel_name">Wecker-Benachrichtigungen</string>
+    <string name="alarm_notification_channel_description">Kanal für Wecker-Benachrichtigungen</string>
+</resources>
