@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.delay
 
 class AlarmActivity : ComponentActivity() {
@@ -177,7 +178,7 @@ fun RingingScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "ALARM RINGING!",
+            text = stringResource(R.string.alarm_ringing_title),
             style = MaterialTheme.typography.headlineLarge,
             color = contentColor
         )
@@ -193,7 +194,7 @@ fun RingingScreen(
                     contentColor = background
                 )
             ) {
-                Text(text = "STOP", fontSize = 24.sp)
+                Text(text = stringResource(R.string.alarm_stop_button), fontSize = 24.sp)
             }
             Button(
                 onClick = onSnooze,
@@ -208,7 +209,7 @@ fun RingingScreen(
                             MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
-                Text(text = "SNOOZE", fontSize = 24.sp)
+                Text(text = stringResource(R.string.alarm_snooze_button), fontSize = 24.sp)
             }
         }
     }

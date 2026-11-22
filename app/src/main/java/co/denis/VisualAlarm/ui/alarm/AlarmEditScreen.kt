@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +49,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import co.denis.VisualAlarm.R
 import co.denis.VisualAlarm.StoredAlarm
 import co.denis.VisualAlarm.Hour
 import co.denis.VisualAlarm.Minute
@@ -128,7 +130,7 @@ fun AlarmEditSheetContent(
         ) {
             // Title
             Text(
-                text = if (alarm == null) "Add Alarm" else "Edit Alarm",
+                text = if (alarm == null) stringResource(R.string.add_alarm_sheet_title) else stringResource(R.string.edit_alarm_sheet_title),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -150,7 +152,7 @@ fun AlarmEditSheetContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Time", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(R.string.time_label), style = MaterialTheme.typography.bodyLarge)
                     Text(
                         text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
                         style = MaterialTheme.typography.headlineMedium
@@ -166,7 +168,7 @@ fun AlarmEditSheetContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "Snooze", style = MaterialTheme.typography.bodyLarge)
+                Text(text = stringResource(R.string.snooze_label), style = MaterialTheme.typography.bodyLarge)
                 Switch(
                     checked = snoozeEnabled,
                     onCheckedChange = { snoozeEnabled = it }
@@ -181,7 +183,7 @@ fun AlarmEditSheetContent(
                         .padding(horizontal = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(text = "Snooze duration", style = MaterialTheme.typography.bodyMedium)
+                    Text(text = stringResource(R.string.snooze_duration_label), style = MaterialTheme.typography.bodyMedium)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -202,7 +204,7 @@ fun AlarmEditSheetContent(
                             modifier = Modifier.width(60.dp),
                             singleLine = true
                         )
-                        Text(text = " min", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = stringResource(R.string.snooze_duration_minutes_suffix), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -235,7 +237,7 @@ fun AlarmEditSheetContent(
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
                         )
                     ) {
-                        Text(text = "Delete", fontSize = 16.sp)
+                        Text(text = stringResource(R.string.delete_button), fontSize = 16.sp)
                     }
                 }
 
@@ -248,7 +250,7 @@ fun AlarmEditSheetContent(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
-                    Text(text = "Cancel", fontSize = 16.sp)
+                    Text(text = stringResource(R.string.cancel_button), fontSize = 16.sp)
                 }
 
                 // Save button
@@ -264,7 +266,7 @@ fun AlarmEditSheetContent(
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(text = if (alarm == null) "Add" else "Save", fontSize = 16.sp)
+                    Text(text = if (alarm == null) stringResource(R.string.add_button) else stringResource(R.string.save_button), fontSize = 16.sp)
                 }
             }
         }
@@ -274,7 +276,7 @@ fun AlarmEditSheetContent(
     if (showTimePickerDialog) {
         AlertDialog(
             onDismissRequest = { showTimePickerDialog = false },
-            title = { Text("Select Time", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) },
+            title = { Text(stringResource(R.string.select_time_dialog_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) },
             text = {
                 TimePicker(
                     state = timePickerState,
@@ -287,12 +289,12 @@ fun AlarmEditSheetContent(
                     selectedMinute = timePickerState.minute
                     showTimePickerDialog = false
                 }) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePickerDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel_button))
                 }
             },
             properties = DialogProperties(usePlatformDefaultWidth = false)

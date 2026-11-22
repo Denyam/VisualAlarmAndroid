@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
                 alarmStore.save(alarm.copy(enabled = false))
                 Toast.makeText(
                     this,
-                    "Failed to set alarm. Check permissions.",
+                    getString(R.string.toast_failed_to_set_alarm),
                     Toast.LENGTH_SHORT
                 ).show()
             }
