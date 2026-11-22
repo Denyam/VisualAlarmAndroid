@@ -20,13 +20,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.denis.VisualAlarm.R
 import co.denis.VisualAlarm.StoredAlarm
-import java.util.Locale
+import co.denis.VisualAlarm.util.TimeFormatUtil
 
 
 
@@ -38,6 +39,7 @@ fun AlarmItem(
     onClick: () -> Unit,
     enabled: Boolean = true
 ) {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -48,8 +50,8 @@ fun AlarmItem(
     ) {
         // Time display - takes most space
         Text(
-            text = String.format(Locale.getDefault(), "%02d:%02d", alarm.hour.value, alarm.minute.value),
-            style = MaterialTheme.typography.displayLarge,
+            text = TimeFormatUtil.formatTime(context, alarm.hour.value, alarm.minute.value),
+            style = MaterialTheme.typography.displayMedium,
             textAlign = TextAlign.Start,
             modifier = Modifier.weight(1f)
         )

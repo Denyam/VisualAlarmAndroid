@@ -53,8 +53,8 @@ import co.denis.VisualAlarm.R
 import co.denis.VisualAlarm.StoredAlarm
 import co.denis.VisualAlarm.Hour
 import co.denis.VisualAlarm.Minute
+import co.denis.VisualAlarm.util.TimeFormatUtil
 import java.util.Calendar
-import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -100,11 +100,15 @@ fun AlarmEditSheetContent(
 
     fun snoozeString() = snoozeDuration().toString()
 
+    val context = LocalContext.current
+    // Use system 12/24 hour format setting
+    val is24Hour = TimeFormatUtil.is24HourFormat(context)
+
     // TimePicker state for the dialog
     val timePickerState = rememberTimePickerState(
         initialHour = selectedHour,
         initialMinute = selectedMinute,
-        is24Hour = true
+        is24Hour = is24Hour
     )
 
     // Sync timePickerState with selectedHour/selectedMinute
@@ -154,7 +158,7 @@ fun AlarmEditSheetContent(
                 ) {
                     Text(text = stringResource(R.string.time_label), style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        text = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
+                        text = TimeFormatUtil.formatTime(context, selectedHour, selectedMinute),
                         style = MaterialTheme.typography.headlineMedium
                     )
                 }
