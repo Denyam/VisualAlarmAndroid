@@ -5,7 +5,7 @@
     <!-- Alarm permission flow -->
     <string name="permission_still_needed">Eine erforderliche Berechtigung fehlt noch. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
 
-`    <string name="notification_permission_denied">Benachrichtigungen sind deaktiviert, daher werden Wecker nicht angezeigt. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
+    <string name="notification_permission_denied">Benachrichtigungen sind deaktiviert, daher werden Wecker nicht angezeigt. Tippen Sie auf WECKER EINSTELLEN, um es erneut zu versuchen.</string>
 
     <!-- Alarm Ringing Screen -->
     <string name="alarm_ringing_title">WECKER LÄUTET!</string>
