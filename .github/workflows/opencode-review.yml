@@ -25,7 +25,10 @@ jobs:
           model: nvidia/nvidia/nemotron-3-ultra-550b-a55b
           prompt: |
             Review this pull request:
+            - Pull request number: ${{ github.event.pull_request.number }}
+            - Source branch: ${{ github.head_ref }}
+            - Target branch: ${{ github.base_ref }}
+            - Review only what was changed in this PR
             - Check for code quality issues
             - Look for potential bugs
             - Suggest improvements
-
