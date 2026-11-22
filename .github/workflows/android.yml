@@ -43,9 +43,9 @@ jobs:
           Commit: ${{ github.event.head_commit.id }}"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
-            -d chat_id="419518425" \
-            -d caption="$MESSAGE" \
-            -d document=@"app/build/outputs/apk/debug/app-debug.apk"
+            -F chat_id="419518425" \
+            -F caption="$MESSAGE" \
+            -F document="$APK_URL"
 
 # ${{ secrets.SOPHIE_TELEGRAM_ID }}
 # 📥 [Download APK]($APK_URL)
