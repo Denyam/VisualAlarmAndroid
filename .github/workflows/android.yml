@@ -40,13 +40,12 @@ jobs:
           APK_URL="https://github.com/${{ github.repository }}/releases/download/build-${{ github.run_number }}/app-debug.apk"
           MESSAGE="Вот будильник!
           Build number: ${{ github.run_number }}
-          Commit: ${{ github.event.head_commit.id }}
-          📥 [Download APK]($APK_URL)"
+          Commit: ${{ github.event.head_commit.id }}"
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
             -d chat_id="419518425" \
-            -d parse_mode="Markdown" \
             -d caption="$MESSAGE" \
             -d document=@"app/build/outputs/apk/debug/app-debug.apk"
 
 # ${{ secrets.SOPHIE_TELEGRAM_ID }}
+# 📥 [Download APK]($APK_URL)
