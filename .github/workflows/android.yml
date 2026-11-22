@@ -27,16 +27,14 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew clean assembleDebug -PversionCode=${{ github.run_number }}
 
-    - name: Create Release and Upload APK
-      id: create_release
-      uses: softprops/action-gh-release@v2
-      with:
-          tag_name: build-${{ github.run_number }}
-          name: Build #${{ github.run_number }}
-          files: app/build/outputs/apk/debug/app-debug.apk
-          
-    - name: Send APK Link to Telegram
+    - name: Create Tag
+      id: create_tag
       run: |
+          git tag build-${{ github.run_number }}
+          
+    - name: Send APK to Telegram
+      run: |
+          FILE_PATH="app/build/outputs/apk/debug/app-debug.apk"
           APK_URL="https://github.com/${{ github.repository }}/releases/download/build-${{ github.run_number }}/app-debug.apk"
           MESSAGE="Вот будильник!
           Build number: ${{ github.run_number }}
@@ -45,4 +43,4 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
             -F chat_id="${{ secrets.SOPHIE_TELEGRAM_ID }}" \
             -F caption="$MESSAGE" \
-            -F document=@"app/build/outputs/apk/debug/app-debug.apk"
+            -F document=@"$FILE_PATH"
