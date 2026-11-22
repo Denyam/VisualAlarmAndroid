@@ -29,6 +29,6 @@ jobs:
             - Source branch: ${{ github.head_ref }}
             - Target branch: ${{ github.base_ref }}
             - Review only what was changed in this PR
-            - Check for code quality issues
-            - Look for potential bugs
+            - Check for code quality issues and major bugs
             - Suggest improvements
+            - Do not report a finding if it wasn't introduced by this PR
