@@ -43,7 +43,7 @@ jobs:
           Commit: ${{ github.event.head_commit.id }}
           📥 [Download APK]($APK_URL)"
 
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
             -d chat_id="419518425" \
             -d parse_mode="Markdown" \
             -d caption="$MESSAGE" \
