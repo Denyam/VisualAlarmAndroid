@@ -12,6 +12,8 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+      debug_keystore_base64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}      
 
     steps:
     - uses: actions/checkout@v4
@@ -23,7 +25,7 @@ jobs:
         cache: gradle
 
     - name: Configure debug keystore
-      if: ${{ secrets.DEBUG_KEYSTORE_BASE64 != '' }}
+      if: ${{ env.debug_keystore_base64 != '' }}
       run: echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
 
     - name: Grant execute permission for gradlew
